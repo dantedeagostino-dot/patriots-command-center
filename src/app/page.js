@@ -1,11 +1,9 @@
-// src/app/page.js
-import { getPatriotsSchedule, getTeamNews, getStandings } from '../lib/nflApi'; // Importamos getStandings
-import { processSchedule, getGameInfo } from '../lib/utils';
-import DashboardTabs from '../components/DashboardTabs';
 import { getPatriotsSchedule, getTeamNews, getStandings, getTeamPlayers } from '../lib/nflApi';
+import { processSchedule, getGameInfo } from '../lib/utils';
 import DashboardTabs from '../components/DashboardTabs';
 
 export default async function Home() {
+  // 1. Obtener datos en paralelo (Schedule, News, Standings, Players)
   const [scheduleRaw, newsRaw, standingsRaw, playersRaw] = await Promise.all([
     getPatriotsSchedule(),
     getTeamNews(),
@@ -38,16 +36,9 @@ export default async function Home() {
      cleanNews = [{ title: "Check official site for latest updates", link: "https://www.patriots.com/news/", source: "System", pubDate: new Date().toISOString() }];
   }
 
-  // 4. PROCESAR STANDINGS (POSICIONES) - Nuevo 
+  // 4. Procesar Récord de Temporada
   let seasonRecord = "0-0";
   try {
-     // La estructura usual es standings -> groups -> teams
-     // Buscamos a los Patriots (ID 17) en la lista gigante
-     // Esta lógica intenta encontrar el récord en la respuesta compleja de standings
-     /* Nota: Como la estructura de standings varía, usaremos un fallback seguro:
-        Si el endpoint de standings es complejo, intentamos sacar el record del nextGameFormatted 
-        que a veces lo trae. Si no, dejamos el placeholder o lo que traiga standingsRaw.
-     */
      if (nextGameFormatted?.patriots?.record && nextGameFormatted.patriots.record !== "0-0") {
         seasonRecord = nextGameFormatted.patriots.record;
      }
@@ -55,9 +46,28 @@ export default async function Home() {
      console.error("Error parsing standings", e);
   }
 
-  rreturn (
+  return (
     <main className="min-h-screen bg-[#050B14] text-white font-sans pb-10">
-      {/* ... (header y título se quedan igual) ... */}
+      <header className="bg-slate-900/80 backdrop-blur-md border-b border-slate-800 sticky top-0 z-50">
+        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+             <img src="https://upload.wikimedia.org/wikipedia/en/thumb/b/b9/New_England_Patriots_logo.svg/1200px-New_England_Patriots_logo.svg.png" className="w-10 h-10 object-contain" alt="Logo" />
+             <div>
+               <h1 className="text-xl font-black tracking-tighter text-white leading-none">COMMAND CENTER</h1>
+               <p className="text-blue-500 text-[10px] font-bold tracking-[0.2em] uppercase">New England Patriots</p>
+             </div>
+          </div>
+          <div className="hidden md:block text-right">
+             <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                </span>
+                <p className="text-xs font-mono font-bold text-gray-400">SYSTEM ONLINE</p>
+             </div>
+          </div>
+        </div>
+      </header>
 
       <div className="max-w-5xl mx-auto p-4 md:p-6 mt-4">
            <div className="flex justify-between items-end mb-4 px-2">
@@ -70,7 +80,7 @@ export default async function Home() {
               nextGame={nextGameFormatted} 
               upcoming={upcomingFormatted}
               news={cleanNews}
-              players={playersRaw?.teamPlayers || []}  // <--- AGREGAR ESTA LÍNEA
+              players={playersRaw?.teamPlayers || []}
            />
       </div>
     </main>
