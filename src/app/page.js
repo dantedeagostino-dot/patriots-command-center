@@ -3,7 +3,6 @@ import { getPatriotsSchedule, getTeamNews, getStandings } from '../lib/nflApi'; 
 import { processSchedule, getGameInfo } from '../lib/utils';
 import DashboardTabs from '../components/DashboardTabs';
 import { getPatriotsSchedule, getTeamNews, getStandings, getTeamPlayers } from '../lib/nflApi';
-import { processSchedule, getGameInfo } from '../lib/utils';
 import DashboardTabs from '../components/DashboardTabs';
 
 export default async function Home() {
