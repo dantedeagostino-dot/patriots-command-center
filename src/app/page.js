@@ -2,13 +2,16 @@
 import { getPatriotsSchedule, getTeamNews, getStandings } from '../lib/nflApi'; // Importamos getStandings
 import { processSchedule, getGameInfo } from '../lib/utils';
 import DashboardTabs from '../components/DashboardTabs';
+import { getPatriotsSchedule, getTeamNews, getStandings, getTeamPlayers } from '../lib/nflApi';
+import { processSchedule, getGameInfo } from '../lib/utils';
+import DashboardTabs from '../components/DashboardTabs';
 
 export default async function Home() {
-  // 1. Obtener datos en paralelo (Schedule, News, Standings)
-  const [scheduleRaw, newsRaw, standingsRaw] = await Promise.all([
+  const [scheduleRaw, newsRaw, standingsRaw, playersRaw] = await Promise.all([
     getPatriotsSchedule(),
     getTeamNews(),
-    getStandings()
+    getStandings(),
+    getTeamPlayers()
   ]);
 
   // 2. Procesar Calendario
@@ -53,31 +56,11 @@ export default async function Home() {
      console.error("Error parsing standings", e);
   }
 
-  return (
+  rreturn (
     <main className="min-h-screen bg-[#050B14] text-white font-sans pb-10">
-      <header className="bg-slate-900/80 backdrop-blur-md border-b border-slate-800 sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-             <img src="https://upload.wikimedia.org/wikipedia/en/thumb/b/b9/New_England_Patriots_logo.svg/1200px-New_England_Patriots_logo.svg.png" className="w-10 h-10 object-contain" alt="Logo" />
-             <div>
-               <h1 className="text-xl font-black tracking-tighter text-white leading-none">COMMAND CENTER</h1>
-               <p className="text-blue-500 text-[10px] font-bold tracking-[0.2em] uppercase">New England Patriots</p>
-             </div>
-          </div>
-          <div className="hidden md:block text-right">
-             <div className="flex items-center gap-2">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                </span>
-                <p className="text-xs font-mono font-bold text-gray-400">SYSTEM ONLINE</p>
-             </div>
-          </div>
-        </div>
-      </header>
+      {/* ... (header y título se quedan igual) ... */}
 
       <div className="max-w-5xl mx-auto p-4 md:p-6 mt-4">
-           {/* Widget de Récord Rápido (Opcional, arriba de las pestañas) */}
            <div className="flex justify-between items-end mb-4 px-2">
               <span className="text-xs text-gray-500 font-bold uppercase">Current Season</span>
               <span className="text-xl font-black text-white">{seasonRecord} <span className="text-blue-500 text-xs">AFC EAST</span></span>
@@ -87,7 +70,8 @@ export default async function Home() {
               history={historyFormatted} 
               nextGame={nextGameFormatted} 
               upcoming={upcomingFormatted}
-              news={cleanNews} 
+              news={cleanNews}
+              players={playersRaw?.teamPlayers || []}  // <--- AGREGAR ESTA LÍNEA
            />
       </div>
     </main>
