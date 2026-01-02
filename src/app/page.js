@@ -3,13 +3,16 @@ import { processSchedule, getGameInfo } from '../lib/utils';
 import DashboardTabs from '../components/DashboardTabs';
 
 export default async function Home() {
-  // 1. Obtener datos en paralelo (Schedule, News, Standings, Players)
+  // 1. Obtener datos en paralelo
   const [scheduleRaw, newsRaw, standingsRaw, playersRaw] = await Promise.all([
     getPatriotsSchedule(),
     getTeamNews(),
     getStandings(),
     getTeamPlayers()
   ]);
+
+  // --- DEBUG: Ver en los logs de Vercel qué llega realmente ---
+  console.log("🔍 API ROSTER RESPONSE:", JSON.stringify(playersRaw, null, 2));
 
   // 2. Procesar Calendario
   const { history, next, upcoming } = processSchedule(scheduleRaw);
@@ -46,6 +49,20 @@ export default async function Home() {
      console.error("Error parsing standings", e);
   }
 
+  // 5. PROCESAR ROSTER (Lógica más robusta)
+  let finalRoster = [];
+  if (playersRaw) {
+      if (Array.isArray(playersRaw)) {
+          finalRoster = playersRaw;
+      } else if (playersRaw.teamPlayers) {
+          finalRoster = playersRaw.teamPlayers;
+      } else if (playersRaw.athletes) {
+          finalRoster = playersRaw.athletes; // Estructura común en APIs de ESPN
+      } else if (playersRaw.items) {
+          finalRoster = playersRaw.items;
+      }
+  }
+
   return (
     <main className="min-h-screen bg-[#050B14] text-white font-sans pb-10">
       <header className="bg-slate-900/80 backdrop-blur-md border-b border-slate-800 sticky top-0 z-50">
@@ -80,7 +97,7 @@ export default async function Home() {
               nextGame={nextGameFormatted} 
               upcoming={upcomingFormatted}
               news={cleanNews}
-              players={playersRaw?.teamPlayers || []}
+              players={finalRoster}
            />
       </div>
     </main>
