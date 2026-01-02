@@ -76,3 +76,15 @@ export async function getTeamPlayers() {
   // Usamos el ID 17 de los Patriots
   return await fetchFromNFL('nflteamplayers', 'teamid=17');
 }
+
+// 6. OBTENER ESTADÍSTICAS DE JUGADORES
+// Documentación: Get NFL Player Stats
+export async function getPlayerStats(playerId) {
+  return await fetchFromNFL('nflplayerstats', `playerid=${playerId}&season=2024`);
+}
+
+// 7. OBTENER DATOS DE PARTIDOS EN VIVO
+// Documentación: Get NFL Live Scores
+export async function getLiveScores() {
+  return await fetchFromNFL('nfllivescores');
+}
