@@ -1,76 +1,36 @@
-# 🏈 Patriots Command Center
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
-**Patriots Command Center** es una aplicación moderna tipo *dashboard* diseñada para los fanáticos de los New England Patriots. Permite seguir el calendario, ver resultados en tiempo real, consultar noticias y explorar la plantilla de jugadores en una interfaz rápida y oscura "Dark Mode".
+## Getting Started
 
-![Project Status](https://img.shields.io/badge/status-active-success.svg)
-![Next.js](https://img.shields.io/badge/Next.js-16.1-black)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.0-38B2AC)
+First, run the development server:
 
-## 🚀 Funcionalidades
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
+```
 
-Esta aplicación va más allá de un simple calendario. Incluye:
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-- **📅 Gestión de Calendario:** Visualización inteligente de partidos pasados (History), el próximo juego (Next) y los futuros (Upcoming).
-- **🔴 Modo "Live Game":** Panel en tiempo real que se activa durante los partidos con:
-  - Marcador en vivo y reloj de juego.
-  - Relato jugada a jugada (Play-by-Play).
-  - Gráfico de tendencia de puntaje (Score Trend Chart) usando *Recharts*.
-  - Líderes en estadísticas (Pases, Acarreos, Recepciones).
-  - Probabilidades y apuestas (Spread, Moneyline, Predicción).
-- **📰 Centro de Noticias:** Feed de las últimas noticias relacionadas con el equipo.
-- **👥 Roster Interactivo:** Explorador de jugadores con buscador en tiempo real por nombre o posición.
-- **🎨 UI Moderna:** Diseño responsivo con *Geist Font*, efectos de vidrio (glassmorphism) y animaciones fluidas.
+You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
 
-## 🛠️ Tecnologías Utilizadas
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-Este proyecto utiliza las últimas tecnologías web disponibles:
+## Learn More
 
-- **Framework:** [Next.js 16.1](https://nextjs.org/) (App Router)
-- **Lenguaje:** JavaScript (ES6+) / React 19
-- **Estilos:** [Tailwind CSS v4](https://tailwindcss.com/)
-- **Gráficos:** [Recharts](https://recharts.org/)
-- **Fuentes:** Geist Sans & Mono (Vercel)
-- **Datos:** Integración con [RapidAPI (NFL API)](https://rapidapi.com/)
+To learn more about Next.js, take a look at the following resources:
 
-## 📦 Instalación y Configuración Local
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-Si deseas correr este proyecto en tu máquina local:
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-1.  **Clona el repositorio:**
-    ```bash
-    git clone [https://github.com/dantedeagostino-dot/patriots-command-center.git](https://github.com/dantedeagostino-dot/patriots-command-center.git)
-    cd patriots-command-center
-    ```
+## Deploy on Vercel
 
-2.  **Instala las dependencias:**
-    ```bash
-    npm install
-    # o
-    yarn install
-    ```
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-3.  **Configura las Variables de Entorno:**
-    Crea un archivo `.env.local` en la raíz del proyecto y agrega tus credenciales de RapidAPI (necesarias para obtener los datos):
-    ```env
-    RAPIDAPI_KEY=tu_api_key_aqui
-    RAPIDAPI_HOST=nfl-api1.p.rapidapi.com
-    ```
-
-4.  **Inicia el servidor de desarrollo:**
-    ```bash
-    npm run dev
-    ```
-    Abre [http://localhost:3000](http://localhost:3000) en tu navegador.
-
-## 🚀 Despliegue (Deploy)
-
-El proyecto está optimizado para ser desplegado en **Vercel**:
-
-1.  Sube tu código a GitHub.
-2.  Importa el proyecto en Vercel.
-3.  **Importante:** En la configuración del proyecto en Vercel, ve a *Settings > Environment Variables* y agrega las mismas variables (`RAPIDAPI_KEY` y `RAPIDAPI_HOST`) que usaste localmente.
-4.  ¡Listo! Vercel detectará Next.js y construirá la aplicación automáticamente.
-
----
-
-Hecho con ❤️ por **Dante DeAgostino** para la #PatsNation.
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
