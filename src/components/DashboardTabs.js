@@ -141,15 +141,15 @@ function NewsSection({ news }) {
   );
 }
 
-// --- NUEVO COMPONENTE: LISTA DE JUGADORES ---
+// --- COMPONENTE: LISTA DE JUGADORES ---
 function RosterList({ players }) {
   const [search, setSearch] = useState("");
   
-  if (!players || players.length === 0) return <div className="text-center p-10 text-gray-500">Loading roster...</div>;
+  if (!players || players.length === 0) return null; // El manejo de "vacío" lo hace el padre ahora
 
   const filteredPlayers = players.filter(p => 
-     p.displayName?.toLowerCase().includes(search.toLowerCase()) || 
-     p.position?.name?.toLowerCase().includes(search.toLowerCase())
+     (p.displayName && p.displayName.toLowerCase().includes(search.toLowerCase())) || 
+     (p.position && p.position.name && p.position.name.toLowerCase().includes(search.toLowerCase()))
   );
 
   return (
@@ -179,7 +179,7 @@ function RosterList({ players }) {
                         onError={(e) => { e.target.onerror = null; e.target.src = "https://static.www.nfl.com/image/private/f_auto,q_auto/league/nfl-placeholder"; }}
                       />
                    </div>
-                   <h4 className="font-bold text-sm text-center text-white">{player.displayName}</h4>
+                   <h4 className="font-bold text-sm text-center text-white">{player.displayName || "Unknown Player"}</h4>
                    <p className="text-xs text-blue-400 font-bold mt-1">{player.position?.abbreviation || player.position?.name || "N/A"}</p>
                    
                    <div className="flex gap-2 mt-3 text-[10px] text-gray-500 uppercase font-bold">
@@ -196,9 +196,17 @@ function RosterList({ players }) {
 
 // --- COMPONENTE PRINCIPAL ---
 
-export default function DashboardTabs({ history, nextGame, upcoming, news, players }) {
+export default function DashboardTabs({ history, nextGame, upcoming, news, players, debugData }) {
   const [activeTab, setActiveTab] = useState('next');
   
+  // --- DEBUGGER EN EL NAVEGADOR ---
+  useEffect(() => {
+    if (activeTab === 'roster') {
+      console.log("🕵️‍♂️ DATOS CRUDOS DE LA API (ROSTER):", debugData);
+      console.log("✅ JUGADORES PROCESADOS:", players);
+    }
+  }, [activeTab, debugData, players]);
+
   // ESTADOS
   const [livePlays, setLivePlays] = useState([]);
   const [liveStats, setLiveStats] = useState(null);
@@ -213,13 +221,11 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
       patriots: { 
           ...nextGame.patriots, 
           score: "27",
-          // Seguridad extra: Aseguramos que name sea string
           name: String(nextGame.patriots.name || "Patriots")
       },
       opponent: { 
           ...nextGame.opponent, 
           score: "24",
-          // Seguridad extra: Aseguramos que name sea string
           name: String(nextGame.opponent.name || "Opponent")
       }
   } : nextGame;
@@ -391,9 +397,25 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
           </div>
         )}
 
-        {/* --- NUEVA PESTAÑA: ROSTER --- */}
+        {/* --- PESTAÑA ROSTER MEJORADA --- */}
         {activeTab === 'roster' && (
-           <RosterList players={players} />
+           <div className="min-h-[200px]">
+             {/* Si hay jugadores, mostramos la lista */}
+             {players && players.length > 0 ? (
+                <RosterList players={players} />
+             ) : (
+                /* Si NO hay jugadores, mostramos mensaje de error útil */
+                <div className="text-center p-10 bg-slate-900/50 rounded-xl border border-slate-800">
+                   <p className="text-red-400 font-bold mb-2">No data found</p>
+                   <p className="text-gray-500 text-xs">
+                     Open your browser console (Right Click {'->'} Inspect {'->'} Console) to see the API response structure.
+                   </p>
+                   <pre className="mt-4 text-[10px] text-left bg-black p-4 rounded overflow-auto max-h-60 text-green-400 font-mono">
+                      {debugData ? JSON.stringify(debugData, null, 2) : "No data available"}
+                   </pre>
+                </div>
+             )}
+           </div>
         )}
       </div>
     </div>
