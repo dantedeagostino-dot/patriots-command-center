@@ -4,33 +4,30 @@ import {
   getStandings, 
   getTeamPlayers, 
   getBasicRoster,
-  getTeamLeaders,  
+  getTeamLeaders,
   getTeamInjuries
 } from '../lib/nflApi';
 import { processSchedule, getGameInfo } from '../lib/utils';
 import DashboardTabs from '../components/DashboardTabs';
 
 export default async function Home() {
-  // 1. OBTENCIÓN DE DATOS SEGURA
-  let scheduleRaw, newsRaw, standingsRaw, playersRaw, leadersRaw, injuriesRaw;
+  // 1. OBTENCIÓN DE DATOS (PROTEGIDA)
+  // Usamos .catch(err => null) en cada llamada para que si una falla, las demás sigan funcionando.
+  const [scheduleRaw, newsRaw, standingsRaw, playersRaw, leadersRaw, injuriesRaw] = await Promise.all([
+    getPatriotsSchedule().catch(() => null),
+    getTeamNews().catch(() => null),
+    getStandings().catch(() => null),
+    getTeamPlayers().catch(() => null),
+    getTeamLeaders().catch(() => null),
+    getTeamInjuries().catch(() => null)
+  ]);
 
-  try {
-    [scheduleRaw, newsRaw, standingsRaw, playersRaw, leadersRaw, injuriesRaw] = await Promise.all([
-      getPatriotsSchedule().catch(e => null),
-      getTeamNews().catch(e => null),
-      getStandings().catch(e => null),
-      getTeamPlayers().catch(e => null),
-      getTeamLeaders().catch(e => null),
-      getTeamInjuries().catch(e => null)
-    ]);
-  } catch (error) {
-    console.error("Critical API Error:", error);
-  }
-
-  // PLAN B: Si el roster falla
-  if (!playersRaw) {
+  // PLAN B: Si el roster principal falla, intentamos el básico
+  let finalPlayersRaw = playersRaw;
+  if (!finalPlayersRaw) {
       try {
-        playersRaw = await getBasicRoster();
+        console.log("⚠️ Roster completo falló, usando básico...");
+        finalPlayersRaw = await getBasicRoster().catch(() => null);
       } catch (e) { console.error(e); }
   }
 
@@ -40,10 +37,12 @@ export default async function Home() {
   const nextGameFormatted = getGameInfo(next);
   const upcomingFormatted = upcoming.map(game => getGameInfo(game)).filter(Boolean);
 
-  // 3. Procesar Noticias (CORRECCIÓN CRÍTICA: Validar Array)
+  // 3. Procesar Noticias (AQUÍ ESTABA EL ERROR "b.map is not a function")
   let cleanNews = [];
   let rawList = [];
   
+  // Verificación estricta: Solo asignamos si es un Array real.
+  // Antes, si 'newsRaw.data' era un objeto de error, el código explotaba. Ahora no.
   if (Array.isArray(newsRaw)) {
       rawList = newsRaw;
   } else if (newsRaw?.data && Array.isArray(newsRaw.data)) {
@@ -52,7 +51,7 @@ export default async function Home() {
       rawList = newsRaw.articles;
   }
 
-  if (Array.isArray(rawList) && rawList.length > 0) {
+  if (rawList.length > 0) {
       cleanNews = rawList.map(item => ({
          title: item.headline || item.title || "Patriots News",
          link: item.links?.web?.href || item.link || "https://www.patriots.com/news/",
@@ -75,15 +74,15 @@ export default async function Home() {
 
   // 5. Roster
   let finalRoster = [];
-  if (playersRaw) {
-      if (playersRaw.team && playersRaw.team.athletes) {
-          finalRoster = playersRaw.team.athletes;
-      } else if (Array.isArray(playersRaw)) {
-          finalRoster = playersRaw;
-      } else if (playersRaw.teamPlayers) {
-          finalRoster = playersRaw.teamPlayers;
-      } else if (playersRaw.data) {
-          finalRoster = playersRaw.data;
+  if (finalPlayersRaw) {
+      if (finalPlayersRaw.team && finalPlayersRaw.team.athletes) {
+          finalRoster = finalPlayersRaw.team.athletes;
+      } else if (Array.isArray(finalPlayersRaw)) {
+          finalRoster = finalPlayersRaw;
+      } else if (finalPlayersRaw.teamPlayers) {
+          finalRoster = finalPlayersRaw.teamPlayers;
+      } else if (finalPlayersRaw.data) {
+          finalRoster = finalPlayersRaw.data;
       }
   }
 
