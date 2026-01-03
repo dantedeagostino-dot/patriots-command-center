@@ -135,21 +135,16 @@ function NewsSection({ news }) {
   );
 }
 
-// --- NUEVO: WIDGET DE POSICIONES (STANDINGS) ---
+// --- NUEVO: WIDGET DE POSICIONES ---
 function StandingsWidget({ standings }) {
   if (!standings) return null;
 
-  // Lógica inteligente: Buscar recursivamente la división donde están los Patriots (ID: 17)
-  // La API a veces anida las divisiones dentro de conferencias
   let divisionData = [];
-  
   const findPatsDivision = (data) => {
-      // Caso 1: Encontramos una lista de 'entries' (equipos)
       if (data.standings && data.standings.entries) {
           const hasPats = data.standings.entries.some(e => e.team.id === '17');
           if (hasPats) return data.standings.entries;
       }
-      // Caso 2: Seguir bajando por 'children' (Conferencias -> Divisiones)
       if (data.children) {
           for (let child of data.children) {
               const found = findPatsDivision(child);
@@ -210,12 +205,9 @@ function StandingsWidget({ standings }) {
   );
 }
 
-// --- WIDGETS TÁCTICOS BLINDADOS ---
-
 function InjuryReportWidget({ injuries }) {
   const rawList = injuries?.data?.injuries || injuries?.injuries || injuries || [];
   const list = Array.isArray(rawList) ? rawList : [];
-
   if (list.length === 0) return null;
 
   return (
@@ -259,7 +251,6 @@ function InjuryReportWidget({ injuries }) {
 function SeasonLeadersWidget({ leaders }) {
   const rawList = leaders?.data || leaders?.leaders || leaders || [];
   const categories = Array.isArray(rawList) ? rawList : [];
-
   if (categories.length === 0) return null;
 
   return (
@@ -350,27 +341,14 @@ function PlayerModal({ player, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl relative max-h-[90vh] overflow-y-auto">
-        <button 
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-white bg-black/50 p-2 rounded-full transition z-10"
-        >
-          ✕
-        </button>
-
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white bg-black/50 p-2 rounded-full transition z-10">✕</button>
         <div className="relative h-32 bg-gradient-to-r from-blue-900 to-slate-900 flex items-end p-6">
-           <img 
-              src={player.headshot?.href || player.href || "https://static.www.nfl.com/image/private/f_auto,q_auto/league/nfl-placeholder"} 
-              className="absolute top-4 left-6 w-24 h-24 rounded-full border-4 border-slate-900 object-cover bg-slate-800 shadow-xl"
-              alt={player.displayName}
-           />
+           <img src={player.headshot?.href || player.href || "https://static.www.nfl.com/image/private/f_auto,q_auto/league/nfl-placeholder"} className="absolute top-4 left-6 w-24 h-24 rounded-full border-4 border-slate-900 object-cover bg-slate-800 shadow-xl" alt={player.displayName}/>
            <div className="ml-28 mb-1">
               <h2 className="text-2xl font-black text-white leading-none">{player.displayName}</h2>
-              <p className="text-blue-400 font-bold text-sm mt-1">
-                 #{player.jersey || "--"} • {player.position?.name || "Player"}
-              </p>
+              <p className="text-blue-400 font-bold text-sm mt-1">#{player.jersey || "--"} • {player.position?.name || "Player"}</p>
            </div>
         </div>
-
         <div className="p-6 pt-8 min-h-[200px]">
            {loading ? (
              <div className="flex flex-col items-center justify-center h-40 text-gray-500 gap-2">
@@ -392,14 +370,92 @@ function PlayerModal({ player, onClose }) {
            ) : (
              <div className="flex flex-col items-center justify-center h-40 text-center space-y-3 bg-slate-800/20 rounded-xl p-6 border border-slate-700/30">
                 <div className="text-4xl">🛡️</div>
-                <div>
-                    <p className="text-white font-bold text-lg">No Stats Recorded</p>
-                    <p className="text-gray-500 text-xs mt-1 max-w-xs mx-auto">
-                        This player (typically Offensive Line or Special Teams) does not have standard statistical data for this season.
-                    </p>
-                </div>
+                <div><p className="text-white font-bold text-lg">No Stats Recorded</p><p className="text-gray-500 text-xs mt-1 max-w-xs mx-auto">This player (typically Offensive Line or Special Teams) does not have standard statistical data for this season.</p></div>
              </div>
            )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- NUEVO: MODAL DE ESTADÍSTICAS DE JUEGO (GAME STATS) ---
+function GameStatsModal({ game, stats, onClose }) {
+  if (!game) return null;
+
+  // Intentar parsear el Box Score para obtener estadísticas de equipo
+  let teamStats = [];
+  if (stats && stats.boxScore && stats.boxScore.teams) {
+      teamStats = stats.boxScore.teams.map(team => {
+          const getStatVal = (name) => {
+              const s = team.statistics?.find(st => st.name === name || st.label.toLowerCase() === name.toLowerCase());
+              return s ? s.displayValue : "-";
+          };
+          return {
+              name: team.team.shortDisplayName || team.team.name,
+              logo: team.team.logo,
+              yards: getStatVal("totalYards"),
+              passing: getStatVal("netPassingYards"),
+              rushing: getStatVal("rushingYards"),
+              turnovers: getStatVal("turnovers"),
+              possession: getStatVal("possessionTime"),
+              firstDowns: getStatVal("firstDowns")
+          };
+      });
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in zoom-in duration-200">
+      <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl relative max-h-[90vh] overflow-y-auto">
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white bg-black/50 p-2 rounded-full transition z-10">✕</button>
+        
+        {/* Cabecera del Partido */}
+        <div className="bg-gradient-to-b from-slate-800 to-slate-900 p-6 text-center border-b border-slate-700">
+            <div className="text-gray-400 text-xs uppercase tracking-widest mb-4 font-bold">{game.dateString} • {game.venue}</div>
+            <div className="flex justify-center items-center gap-8 md:gap-12">
+                <div className="flex flex-col items-center">
+                    <img src={game.opponent.logo} className="w-16 h-16 object-contain mb-2" alt="Opp"/>
+                    <span className="text-xl font-black text-white">{game.opponent.score}</span>
+                </div>
+                <div className="text-2xl font-black text-gray-600 italic">VS</div>
+                <div className="flex flex-col items-center">
+                    <img src={game.patriots.logo} className="w-16 h-16 object-contain mb-2" alt="Pats"/>
+                    <span className="text-xl font-black text-white">{game.patriots.score}</span>
+                </div>
+            </div>
+        </div>
+
+        {/* Tabla Comparativa */}
+        <div className="p-6">
+            <h3 className="text-center text-blue-400 text-xs font-bold uppercase tracking-[0.2em] mb-4">Official Game Stats</h3>
+            
+            {teamStats.length === 2 ? (
+                <div className="bg-slate-800/50 rounded-xl overflow-hidden border border-slate-700">
+                    <div className="grid grid-cols-3 bg-slate-950/50 p-3 text-[10px] uppercase font-bold text-gray-500 text-center border-b border-slate-700">
+                        <div>{teamStats[0].name}</div>
+                        <div>Stat</div>
+                        <div>{teamStats[1].name}</div>
+                    </div>
+                    {[
+                        { label: "Total Yards", key: "yards" },
+                        { label: "Passing Yards", key: "passing" },
+                        { label: "Rushing Yards", key: "rushing" },
+                        { label: "1st Downs", key: "firstDowns" },
+                        { label: "Turnovers", key: "turnovers" },
+                        { label: "Possession", key: "possession" }
+                    ].map((row, i) => (
+                        <div key={i} className="grid grid-cols-3 p-3 text-sm text-center border-b border-slate-700/50 last:border-0 hover:bg-slate-700/20">
+                            <div className="font-mono font-bold text-white">{teamStats[0][row.key]}</div>
+                            <div className="text-gray-400 text-xs uppercase">{row.label}</div>
+                            <div className="font-mono font-bold text-white">{teamStats[1][row.key]}</div>
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <div className="text-center py-8 text-gray-500">
+                    <p>Detailed stats not available for this game.</p>
+                </div>
+            )}
         </div>
       </div>
     </div>
@@ -420,43 +476,21 @@ function RosterList({ players }) {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-       {selectedPlayer && (
-          <PlayerModal player={selectedPlayer} onClose={() => setSelectedPlayer(null)} />
-       )}
-
+       {selectedPlayer && <PlayerModal player={selectedPlayer} onClose={() => setSelectedPlayer(null)} />}
        <div className="mb-6 sticky top-0 bg-[#050B14] z-10 py-2">
-          <input 
-            type="text" 
-            placeholder="Search player by name or position..." 
-            className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+          <input type="text" placeholder="Search player by name or position..." className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition" value={search} onChange={(e) => setSearch(e.target.value)} />
        </div>
-
        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {filteredPlayers.map((player, i) => (
-             <button 
-                key={player.id || player.playerId || i} 
-                onClick={() => setSelectedPlayer(player)} 
-                className="bg-slate-800 rounded-lg overflow-hidden border border-slate-700 hover:border-blue-500 hover:scale-[1.02] transition group relative text-left w-full focus:outline-none"
-             >
+             <button key={player.id || player.playerId || i} onClick={() => setSelectedPlayer(player)} className="bg-slate-800 rounded-lg overflow-hidden border border-slate-700 hover:border-blue-500 hover:scale-[1.02] transition group relative text-left w-full focus:outline-none">
                 <div className="h-2 bg-gradient-to-r from-blue-900 to-red-900"></div>
                 <div className="p-4 flex flex-col items-center">
                    <div className="w-16 h-16 rounded-full bg-slate-700 mb-3 overflow-hidden border-2 border-slate-600 group-hover:border-blue-400 transition">
-                      <img 
-                        src={player.headshot?.href || player.href || "https://static.www.nfl.com/image/private/f_auto,q_auto/league/nfl-placeholder"} 
-                        alt={player.displayName} 
-                        className="w-full h-full object-cover"
-                        onError={(e) => { e.target.onerror = null; e.target.src = "https://static.www.nfl.com/image/private/f_auto,q_auto/league/nfl-placeholder"; }}
-                      />
+                      <img src={player.headshot?.href || player.href || "https://static.www.nfl.com/image/private/f_auto,q_auto/league/nfl-placeholder"} alt={player.displayName} className="w-full h-full object-cover" onError={(e) => { e.target.onerror = null; e.target.src = "https://static.www.nfl.com/image/private/f_auto,q_auto/league/nfl-placeholder"; }}/>
                    </div>
                    <h4 className="font-bold text-sm text-center text-white">{player.displayName || "Unknown Player"}</h4>
                    <p className="text-xs text-blue-400 font-bold mt-1">{player.position?.abbreviation || player.position?.name || "N/A"}</p>
-                   
-                   <div className="flex gap-2 mt-3 text-[10px] text-gray-500 uppercase font-bold">
-                      <span className="bg-slate-900 px-2 py-1 rounded">#{player.jersey || "--"}</span>
-                   </div>
+                   <div className="flex gap-2 mt-3 text-[10px] text-gray-500 uppercase font-bold"><span className="bg-slate-900 px-2 py-1 rounded">#{player.jersey || "--"}</span></div>
                 </div>
              </button>
           ))}
@@ -471,79 +505,76 @@ function RosterList({ players }) {
 export default function DashboardTabs({ history, nextGame, upcoming, news, players, debugData, leaders, injuries, standings }) {
   const [activeTab, setActiveTab] = useState('next');
   
+  // Live Game State
   const [livePlays, setLivePlays] = useState([]);
   const [liveStats, setLiveStats] = useState(null);
   const [liveOdds, setLiveOdds] = useState(null);
   const [chartData, setChartData] = useState([]);
 
+  // History Game State
+  const [selectedHistoryGame, setSelectedHistoryGame] = useState(null);
+  const [historyGameStats, setHistoryGameStats] = useState(null);
+
   // Simulador
   const displayGame = TEST_LIVE_MODE && nextGame ? {
-      ...nextGame, 
-      isLive: true, 
-      status: "Q4 - 01:58",
-      patriots: { 
-          ...nextGame.patriots, 
-          score: "27",
-          name: String(nextGame.patriots.name || "Patriots")
-      },
-      opponent: { 
-          ...nextGame.opponent, 
-          score: "24",
-          name: String(nextGame.opponent.name || "Opponent")
-      }
+      ...nextGame, isLive: true, status: "Q4 - 01:58",
+      patriots: { ...nextGame.patriots, score: "27", name: String(nextGame.patriots.name || "Patriots") },
+      opponent: { ...nextGame.opponent, score: "24", name: String(nextGame.opponent.name || "Opponent") }
   } : nextGame;
 
+  // Cargar datos en vivo
   useEffect(() => {
     if (TEST_LIVE_MODE) {
-        setLivePlays(MOCK_PLAYS);
-        setLiveStats(MOCK_STATS);
-        setLiveOdds(MOCK_ODDS);
-        setChartData(MOCK_CHART_DATA);
-        return;
+        setLivePlays(MOCK_PLAYS); setLiveStats(MOCK_STATS); setLiveOdds(MOCK_ODDS); setChartData(MOCK_CHART_DATA); return;
     }
-
     if (!nextGame || !nextGame.isLive) return;
 
     const fetchLiveData = async () => {
       try {
         const res = await fetch(`/api/live?id=${nextGame.id}`);
         const data = await res.json();
-        
-        if (data.plays) {
-           const plays = data.plays.drives?.current?.plays || data.plays.plays || []; 
-           setLivePlays(plays);
-        }
-        
+        if (data.plays) setLivePlays(data.plays.drives?.current?.plays || data.plays.plays || []);
         if (data.odds) {
            const provider = data.odds.pickcenter?.[0] || {};
-           setLiveOdds({
-              spread: provider.spread || "-",
-              overUnder: provider.overUnder || "-",
-              moneyline: provider.moneyline || "-"
-           });
+           setLiveOdds({ spread: provider.spread || "-", overUnder: provider.overUnder || "-", moneyline: provider.moneyline || "-" });
         }
-        
         setLiveStats({ passing: {name:"-", stat:"-"}, rushing: {name:"-", stat:"-"}, receiving: {name:"-", stat:"-"} }); 
-
       } catch (e) { console.error(e); }
     };
-
     fetchLiveData();
     const interval = setInterval(fetchLiveData, POLLING_INTERVAL);
     return () => clearInterval(interval);
-
   }, [nextGame]);
+
+  // Manejar click en historial
+  const handleHistoryClick = async (game) => {
+      setSelectedHistoryGame(game);
+      setHistoryGameStats(null); // Resetear stats anteriores
+      try {
+          // Reutilizamos la API de Live porque también trae boxscores de juegos pasados
+          const res = await fetch(`/api/live?id=${game.id}`);
+          if (res.ok) {
+              const data = await res.json();
+              setHistoryGameStats(data);
+          }
+      } catch (error) {
+          console.error("Error fetching history stats:", error);
+      }
+  };
 
   return (
     <div className="w-full">
+      {selectedHistoryGame && (
+          <GameStatsModal 
+            game={selectedHistoryGame} 
+            stats={historyGameStats} 
+            onClose={() => setSelectedHistoryGame(null)} 
+          />
+      )}
+
       <div className="flex border-b border-slate-700 mb-6 bg-slate-900/50 rounded-t-xl overflow-hidden overflow-x-auto">
         {['history', 'next', 'upcoming', 'roster'].map((tab) => (
-          <button 
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`flex-1 min-w-[100px] py-4 text-xs md:text-sm font-bold tracking-wider uppercase transition-colors whitespace-nowrap
-              ${activeTab === tab ? 'bg-slate-800 text-blue-400 border-b-2 border-blue-400' : 'text-gray-500 hover:text-white hover:bg-slate-800'}`}
-          >
+          <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 min-w-[100px] py-4 text-xs md:text-sm font-bold tracking-wider uppercase transition-colors whitespace-nowrap ${activeTab === tab ? 'bg-slate-800 text-blue-400 border-b-2 border-blue-400' : 'text-gray-500 hover:text-white hover:bg-slate-800'}`}>
             {tab === 'history' ? 'History' : tab === 'roster' ? 'Team Roster' : tab === 'upcoming' ? 'Upcoming' : tab}
           </button>
         ))}
@@ -555,8 +586,12 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
             <NewsSection news={news} />
             <div className="space-y-3">
               {history.length > 0 ? history.map(game => (
-                 <div key={game.id} className="flex items-center justify-between bg-slate-800 p-4 rounded-lg border border-slate-700">
-                    <span className="text-gray-400 text-xs w-20">{game.dateString}</span>
+                 <button 
+                    key={game.id} 
+                    onClick={() => handleHistoryClick(game)}
+                    className="w-full flex items-center justify-between bg-slate-800 p-4 rounded-lg border border-slate-700 hover:bg-slate-700 hover:border-blue-500 transition group text-left"
+                 >
+                    <span className="text-gray-400 text-xs w-20 group-hover:text-white transition">{game.dateString}</span>
                     <div className="flex items-center gap-4 font-bold">
                       <img src={game.opponent.logo} className="w-6 h-6 object-contain" alt="Opp" />
                       <span>{game.patriots.score} - {game.opponent.score}</span>
@@ -565,9 +600,10 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
                     <span className={`text-[10px] uppercase font-bold w-20 text-right ${parseInt(game.patriots.score) > parseInt(game.opponent.score) ? 'text-green-400' : 'text-red-400'}`}>
                       {game.status}
                     </span>
-                 </div>
+                 </button>
               )) : <div className="text-center p-10 text-gray-500">No games completed yet.</div>}
             </div>
+            <p className="text-center text-[10px] text-gray-600 mt-4 uppercase tracking-widest">Click on any game to view detailed stats</p>
           </div>
         )}
 
@@ -578,130 +614,71 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
                   <div className="bg-gradient-to-b from-slate-800 to-slate-900 rounded-2xl p-6 border border-blue-900/50 text-center relative shadow-2xl">
                       {displayGame.isLive && (
                         <div className="absolute top-4 right-4 flex items-center gap-2 bg-red-600 px-3 py-1 rounded-full animate-pulse shadow-lg shadow-red-900/50">
-                          <span className="w-2 h-2 bg-white rounded-full"></span>
-                          <span className="text-[10px] font-bold text-white tracking-widest">LIVE</span>
+                          <span className="w-2 h-2 bg-white rounded-full"></span><span className="text-[10px] font-bold text-white tracking-widest">LIVE</span>
                         </div>
                       )}
-
-                      <h2 className="text-blue-500 tracking-[0.3em] text-xs font-bold mb-6 uppercase">
-                        {displayGame.isLive ? "Live Action" : "Next Battle"}
-                      </h2>
-                      
+                      <h2 className="text-blue-500 tracking-[0.3em] text-xs font-bold mb-6 uppercase">{displayGame.isLive ? "Live Action" : "Next Battle"}</h2>
                       <div className="flex justify-center items-center gap-4 md:gap-12 mb-6">
                           <div className="flex flex-col items-center w-1/3">
                               <img src={displayGame.patriots.logo} className="w-20 h-20 md:w-28 md:h-28 object-contain drop-shadow-lg" alt="Pats" />
                               <h3 className="text-xl md:text-2xl font-black mt-4">{String(displayGame.patriots.name)}</h3>
                           </div>
-                          
                           {displayGame.isLive ? (
                             <div className="flex flex-col items-center">
-                                <div className="text-5xl md:text-7xl font-mono font-black text-white tracking-tighter">
-                                  {displayGame.patriots.score}<span className="text-gray-600 mx-2">-</span>{displayGame.opponent.score}
-                                </div>
+                                <div className="text-5xl md:text-7xl font-mono font-black text-white tracking-tighter">{displayGame.patriots.score}<span className="text-gray-600 mx-2">-</span>{displayGame.opponent.score}</div>
                                 <span className="text-red-400 font-bold mt-2 animate-pulse font-mono text-lg">{displayGame.status}</span>
                             </div>
                           ) : (
                             <div className="text-3xl font-black text-slate-700 italic">VS</div>
                           )}
-
                           <div className="flex flex-col items-center w-1/3">
                               <img src={displayGame.opponent.logo} className="w-20 h-20 md:w-28 md:h-28 object-contain drop-shadow-lg" alt="Opp" />
                               <h3 className="text-xl md:text-2xl font-black mt-4">{String(displayGame.opponent.name)}</h3>
                           </div>
                       </div>
-
-                      <div className="max-w-md mx-auto">
-                          <BettingWidget odds={liveOdds} />
-                          <PredictionWidget odds={liveOdds} />
-                      </div>
+                      <div className="max-w-md mx-auto"><BettingWidget odds={liveOdds} /><PredictionWidget odds={liveOdds} /></div>
                   </div>
 
                   {displayGame.isLive ? (
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div className="bg-slate-900/80 rounded-xl p-4 border border-slate-700 h-64">
-                           <p className="text-blue-400 text-xs font-bold uppercase tracking-widest mb-4">Score Trend</p>
-                           <ScoreTrendChart data={chartData} />
-                        </div>
+                        <div className="bg-slate-900/80 rounded-xl p-4 border border-slate-700 h-64"><p className="text-blue-400 text-xs font-bold uppercase tracking-widest mb-4">Score Trend</p><ScoreTrendChart data={chartData} /></div>
                         <PlayByPlayWidget plays={livePlays} />
                         <TopPerformersWidget stats={liveStats} />
                     </div>
                   ) : (
                     <div className="space-y-6">
-                       <div className="bg-black/40 rounded-xl p-6 backdrop-blur-sm border border-white/5 mx-auto max-w-2xl text-center">
-                          <p className="text-blue-400 text-xs font-bold uppercase mb-2 tracking-widest">Kickoff Countdown</p>
-                          <Countdown targetDate={displayGame.dateRaw} />
-                       </div>
-                       
-                       {/* AQUI ESTÁ TU NUEVA TABLA DE POSICIONES */}
+                       <div className="bg-black/40 rounded-xl p-6 backdrop-blur-sm border border-white/5 mx-auto max-w-2xl text-center"><p className="text-blue-400 text-xs font-bold uppercase mb-2 tracking-widest">Kickoff Countdown</p><Countdown targetDate={displayGame.dateRaw} /></div>
                        <StandingsWidget standings={standings} />
-
-                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                          <SeasonLeadersWidget leaders={leaders} />
-                          <InjuryReportWidget injuries={injuries} />
-                       </div>
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700"><SeasonLeadersWidget leaders={leaders} /><InjuryReportWidget injuries={injuries} /></div>
                     </div>
                   )}
-
                </div>
              ) : <div className="text-center p-10 text-gray-500">No scheduled game found.</div>}
           </div>
         )}
 
-        {/* --- PESTAÑA UPCOMING --- */}
         {activeTab === 'upcoming' && (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 relative">
              <div className="text-center mb-8 relative p-6 bg-slate-900/40 rounded-2xl border border-slate-800 overflow-hidden group">
                 <div className="absolute top-0 left-[-100%] w-full h-full bg-gradient-to-r from-transparent via-blue-500/10 to-transparent skew-x-12 animate-[shimmer_3s_infinite]"></div>
-                <h3 className="text-3xl font-black text-white italic tracking-tighter drop-shadow-lg">
-                  <span className="text-blue-500">2026</span> SEASON
-                </h3>
-                <p className="text-gray-400 text-[10px] font-bold tracking-[0.3em] uppercase mt-2">
-                  CLASSIFIED: UPCOMING SCHEDULE
-                </p>
+                <h3 className="text-3xl font-black text-white italic tracking-tighter drop-shadow-lg"><span className="text-blue-500">2026</span> SEASON</h3>
+                <p className="text-gray-400 text-[10px] font-bold tracking-[0.3em] uppercase mt-2">CLASSIFIED: UPCOMING SCHEDULE</p>
              </div>
-
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                {upcoming && upcoming.length > 0 ? upcoming.map(game => (
                  <div key={game.id} className="bg-slate-800 p-4 rounded-lg border border-slate-700 flex items-center gap-4 hover:bg-slate-750 transition hover:border-blue-500/50">
-                    <div className="text-center w-14 bg-slate-900 rounded p-2 border border-slate-800">
-                       <span className="block text-sm font-bold text-blue-400">{game.dateString.split(' ')[0]}</span>
-                       <span className="block text-[10px] text-gray-400 uppercase">{game.dateString.split(' ')[1]}</span>
-                    </div>
-                    <div className="flex-1">
-                       <div className="flex items-center gap-2 mb-1">
-                          <span className="text-gray-500 text-[10px] font-bold">VS</span>
-                          <span className="font-bold text-white">{String(game.opponent.name)}</span>
-                       </div>
-                       <p className="text-[10px] text-gray-500 uppercase tracking-wider">{game.venue}</p>
-                    </div>
+                    <div className="text-center w-14 bg-slate-900 rounded p-2 border border-slate-800"><span className="block text-sm font-bold text-blue-400">{game.dateString.split(' ')[0]}</span><span className="block text-[10px] text-gray-400 uppercase">{game.dateString.split(' ')[1]}</span></div>
+                    <div className="flex-1"><div className="flex items-center gap-2 mb-1"><span className="text-gray-500 text-[10px] font-bold">VS</span><span className="font-bold text-white">{String(game.opponent.name)}</span></div><p className="text-[10px] text-gray-500 uppercase tracking-wider">{game.venue}</p></div>
                     <img src={game.opponent.logo} className="w-10 h-10 object-contain opacity-80" alt="Logo" />
                  </div>
-               )) : (
-                 <div className="col-span-2 text-center py-12 bg-slate-900/50 rounded-xl border border-dashed border-slate-700">
-                    <div className="inline-block p-3 rounded-full bg-slate-800 mb-3">
-                      <span className="text-2xl">📡</span>
-                    </div>
-                    <p className="text-gray-300 font-bold text-sm">No upcoming games detected.</p>
-                    <p className="text-gray-500 text-xs mt-1">System is scanning for 2026 schedule updates...</p>
-                 </div>
-               )}
+               )) : <div className="col-span-2 text-center py-12 bg-slate-900/50 rounded-xl border border-dashed border-slate-700"><div className="inline-block p-3 rounded-full bg-slate-800 mb-3"><span className="text-2xl">📡</span></div><p className="text-gray-300 font-bold text-sm">No upcoming games detected.</p><p className="text-gray-500 text-xs mt-1">System is scanning for 2026 schedule updates...</p></div>}
              </div>
           </div>
         )}
 
-        {/* --- PESTAÑA ROSTER --- */}
         {activeTab === 'roster' && (
            <div className="min-h-[200px]">
-             {players && players.length > 0 ? (
-                <RosterList players={players} />
-             ) : (
-                <div className="text-center p-10 bg-slate-900/50 rounded-xl border border-slate-800">
-                   <p className="text-red-400 font-bold mb-2">No data found</p>
-                   <pre className="mt-4 text-[10px] text-left bg-black p-4 rounded overflow-auto max-h-60 text-green-400 font-mono">
-                      {debugData ? JSON.stringify(debugData, null, 2) : "No data available"}
-                   </pre>
-                </div>
-             )}
+             {players && players.length > 0 ? <RosterList players={players} /> : <div className="text-center p-10 bg-slate-900/50 rounded-xl border border-slate-800"><p className="text-red-400 font-bold mb-2">No data found</p><pre className="mt-4 text-[10px] text-left bg-black p-4 rounded overflow-auto max-h-60 text-green-400 font-mono">{debugData ? JSON.stringify(debugData, null, 2) : "No data available"}</pre></div>}
            </div>
         )}
       </div>
