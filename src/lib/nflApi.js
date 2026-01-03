@@ -11,11 +11,11 @@ const options = {
 const BASE_URL = 'https://nfl-api1.p.rapidapi.com';
 const PATRIOTS_ID = '17'; 
 
-// Función genérica
 export async function fetchFromNFL(endpoint, params = '') {
   try {
     const url = `${BASE_URL}/${endpoint}${params ? `?${params}` : ''}`;
-    const response = await fetch(url, { ...options, next: { revalidate: 300 } });
+    // Aumentamos cache a 1 hora (3600s) para el roster ya que cambia poco
+    const response = await fetch(url, { ...options, next: { revalidate: 3600 } });
     
     if (!response.ok) {
       console.error(`Error API ${endpoint}: ${response.status}`);
@@ -44,15 +44,10 @@ export async function getStandings() {
   return await fetchFromNFL('nflstandings', 'year=2024');
 }
 
-// 4. LESIONES
-export async function getTeamInjuries() {
-  return await fetchFromNFL('team/v2/injuries', `teamId=${PATRIOTS_ID}`);
-}
-
-// 5. JUGADORES (ROSTER) - ✅ CORREGIDO SEGÚN DOC
-// Según la documentación "API Overview", endpoint: /players/id
+// 4. JUGADORES (ROSTER COMPLETO)
+// Intentamos con el endpoint rico usando teamId (CamelCase)
 export async function getTeamPlayers() {
-  return await fetchFromNFL('players/id', `teamId=${PATRIOTS_ID}`);
+  return await fetchFromNFL('nflteamplayers', `teamId=${PATRIOTS_ID}`);
 }
 
 // --- MODO EN VIVO ---

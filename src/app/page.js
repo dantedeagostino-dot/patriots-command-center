@@ -42,16 +42,24 @@ export default async function Home() {
      }
   } catch (e) { console.error(e); }
 
-  // 5. PROCESAR ROSTER (Actualizado según Doc)
+  // 5. PROCESAR ROSTER (Lógica "Todoterreno")
   let finalRoster = [];
   if (playersRaw) {
-      // La documentación dice que viene en la propiedad "data"
-      if (playersRaw.data && Array.isArray(playersRaw.data)) {
-          finalRoster = playersRaw.data; 
-      } else if (Array.isArray(playersRaw)) {
+      // Caso 1: Array directo
+      if (Array.isArray(playersRaw)) {
           finalRoster = playersRaw;
-      } else if (playersRaw.teamPlayers) {
+      } 
+      // Caso 2: Propiedad teamPlayers (Común en este endpoint)
+      else if (playersRaw.teamPlayers) {
           finalRoster = playersRaw.teamPlayers;
+      }
+      // Caso 3: Propiedad data (Como en players/id)
+      else if (playersRaw.data) {
+          finalRoster = playersRaw.data;
+      }
+      // Caso 4: Athletes (Estilo ESPN)
+      else if (playersRaw.athletes) {
+          finalRoster = playersRaw.athletes;
       }
   }
 
@@ -90,7 +98,7 @@ export default async function Home() {
               upcoming={upcomingFormatted}
               news={cleanNews}
               players={finalRoster}
-              debugData={playersRaw}
+              debugData={playersRaw} // Mantenemos el debug por si acaso
            />
       </div>
     </main>
