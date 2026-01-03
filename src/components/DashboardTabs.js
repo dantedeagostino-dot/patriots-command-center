@@ -5,7 +5,7 @@ import ScoreTrendChart from './ScoreTrendChart';
 import SeasonPerformanceChart from './SeasonPerformanceChart';
 
 // --- CONFIGURACIÓN ---
-const TEST_LIVE_MODE = true; // ⚠️ EN TRUE PARA PRUEBAS (Recuerda poner false para producción)
+const TEST_LIVE_MODE = true; // ⚠️ Poner en false para el partido real
 const POLLING_INTERVAL = 15000; 
 
 // --- MOCKS CON DATOS ---
@@ -354,18 +354,14 @@ function SeasonLeadersWidget({ leaders }) {
   );
 }
 
-// --- MODAL DE JUGADOR ---
 function PlayerModal({ player, onClose }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState("");
-
   const validId = player.playerId || player.id;
 
   useEffect(() => {
     if (validId) {
       setLoading(true);
-      setErrorMsg("");
       fetch(`/api/player?id=${validId}`)
         .then(res => {
             if(!res.ok) throw new Error("Error fetching data");
@@ -377,12 +373,8 @@ function PlayerModal({ player, onClose }) {
         })
         .catch(err => {
             console.error(err);
-            setErrorMsg("Connection failed");
             setLoading(false);
         });
-    } else {
-        setErrorMsg("Invalid Player ID");
-        setLoading(false);
     }
   }, [validId]);
 
@@ -394,10 +386,8 @@ function PlayerModal({ player, onClose }) {
   if (stats && stats.player_overview && stats.player_overview.statistics) {
       const apiStats = stats.player_overview.statistics;
       if(apiStats.displayName) seasonTitle = apiStats.displayName;
-      
       const labels = apiStats.labels || [];
       const values = apiStats.splits?.[0]?.stats || [];
-
       if (labels.length > 0 && values.length > 0) {
           displayStats = labels.map((label, index) => ({
               name: label,
@@ -409,26 +399,14 @@ function PlayerModal({ player, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl relative max-h-[90vh] overflow-y-auto">
-        <button 
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-white bg-black/50 p-2 rounded-full transition z-10"
-        >
-          ✕
-        </button>
-
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white bg-black/50 p-2 rounded-full transition z-10">✕</button>
         <div className="relative h-32 bg-gradient-to-r from-blue-900 to-slate-900 flex items-end p-6">
-           <img 
-              src={player.headshot?.href || player.href || "https://static.www.nfl.com/image/private/f_auto,q_auto/league/nfl-placeholder"} 
-              className="absolute top-4 left-6 w-24 h-24 rounded-full border-4 border-slate-900 object-cover bg-slate-800 shadow-xl"
-              alt={player.displayName}
-           />
+           <img src={player.headshot?.href || player.href || "https://static.www.nfl.com/image/private/f_auto,q_auto/league/nfl-placeholder"} className="absolute top-4 left-6 w-24 h-24 rounded-full border-4 border-slate-900 object-cover bg-slate-800 shadow-xl" alt={player.displayName} />
            <div className="ml-28 mb-1">
               <h2 className="text-2xl font-black text-white leading-none">{player.displayName}</h2>
-              <p className="text-blue-400 font-bold text-sm mt-1">
-                 #{player.jersey || "--"} • {player.position?.name || "Player"}</p>
+              <p className="text-blue-400 font-bold text-sm mt-1">#{player.jersey || "--"} • {player.position?.name || "Player"}</p>
            </div>
         </div>
-
         <div className="p-6 pt-8 min-h-[200px]">
            {loading ? (
              <div className="flex flex-col items-center justify-center h-40 text-gray-500 gap-2">
@@ -450,12 +428,7 @@ function PlayerModal({ player, onClose }) {
            ) : (
              <div className="flex flex-col items-center justify-center h-40 text-center space-y-3 bg-slate-800/20 rounded-xl p-6 border border-slate-700/30">
                 <div className="text-4xl">🛡️</div>
-                <div>
-                    <p className="text-white font-bold text-lg">No Stats Recorded</p>
-                    <p className="text-gray-500 text-xs mt-1 max-w-xs mx-auto">
-                        This player (typically Offensive Line or Special Teams) does not have standard statistical data for this season.
-                    </p>
-                </div>
+                <div><p className="text-white font-bold text-lg">No Stats Recorded</p></div>
              </div>
            )}
         </div>
@@ -464,152 +437,27 @@ function PlayerModal({ player, onClose }) {
   );
 }
 
-// --- MODAL DE ESTADÍSTICAS DE JUEGO ---
 function GameStatsModal({ game, stats, onClose }) {
   if (!game) return null;
-
   let teamStats = [];
   if (stats && stats.boxScore && stats.boxScore.teams) {
       teamStats = stats.boxScore.teams.map(team => {
-          const getStatVal = (name) => {
-              const s = team.statistics?.find(st => st.name === name || st.label.toLowerCase() === name.toLowerCase());
-              return s ? s.displayValue : "-";
-          };
-          return {
-              name: team.team.shortDisplayName || team.team.name,
-              logo: team.team.logo,
-              yards: getStatVal("totalYards"),
-              passing: getStatVal("netPassingYards"),
-              rushing: getStatVal("rushingYards"),
-              turnovers: getStatVal("turnovers"),
-              possession: getStatVal("possessionTime"),
-              firstDowns: getStatVal("firstDowns")
-          };
+          const getStatVal = (name) => { const s = team.statistics?.find(st => st.name === name || st.label.toLowerCase() === name.toLowerCase()); return s ? s.displayValue : "-"; };
+          return { name: team.team.shortDisplayName || team.team.name, logo: team.team.logo, yards: getStatVal("totalYards"), passing: getStatVal("netPassingYards"), rushing: getStatVal("rushingYards"), turnovers: getStatVal("turnovers"), possession: getStatVal("possessionTime"), firstDowns: getStatVal("firstDowns") };
       });
   }
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in zoom-in duration-200">
       <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl relative max-h-[90vh] overflow-y-auto">
-        <button 
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-white bg-black/50 p-2 rounded-full transition z-10"
-        >
-          ✕
-        </button>
-        
-        <div className="bg-gradient-to-b from-slate-800 to-slate-900 p-6 text-center border-b border-slate-700">
-            <div className="text-gray-400 text-xs uppercase tracking-widest mb-4 font-bold">{game.dateString} • {game.venue}</div>
-            <div className="flex justify-center items-center gap-8 md:gap-12">
-                <div className="flex flex-col items-center">
-                    <img src={game.opponent.logo} className="w-16 h-16 object-contain mb-2" alt="Opp"/>
-                    <span className="text-xl font-black text-white">{game.opponent.score}</span>
-                </div>
-                <div className="text-2xl font-black text-gray-600 italic">VS</div>
-                <div className="flex flex-col items-center">
-                    <img src={game.patriots.logo} className="w-16 h-16 object-contain mb-2" alt="Pats"/>
-                    <span className="text-xl font-black text-white">{game.patriots.score}</span>
-                </div>
-            </div>
-        </div>
-
-        <div className="p-6">
-            <h3 className="text-center text-blue-400 text-xs font-bold uppercase tracking-[0.2em] mb-4">Official Game Stats</h3>
-            
-            {teamStats.length === 2 ? (
-                <div className="bg-slate-800/50 rounded-xl overflow-hidden border border-slate-700">
-                    <div className="grid grid-cols-3 bg-slate-950/50 p-3 text-[10px] uppercase font-bold text-gray-500 text-center border-b border-slate-700">
-                        <div>{teamStats[0].name}</div>
-                        <div>Stat</div>
-                        <div>{teamStats[1].name}</div>
-                    </div>
-                    {[
-                        { label: "Total Yards", key: "yards" },
-                        { label: "Passing Yards", key: "passing" },
-                        { label: "Rushing Yards", key: "rushing" },
-                        { label: "1st Downs", key: "firstDowns" },
-                        { label: "Turnovers", key: "turnovers" },
-                        { label: "Possession", key: "possession" }
-                    ].map((row, i) => (
-                        <div key={i} className="grid grid-cols-3 p-3 text-sm text-center border-b border-slate-700/50 last:border-0 hover:bg-slate-700/20">
-                            <div className="font-mono font-bold text-white">{teamStats[0][row.key]}</div>
-                            <div className="text-gray-400 text-xs uppercase">{row.label}</div>
-                            <div className="font-mono font-bold text-white">{teamStats[1][row.key]}</div>
-                        </div>
-                    ))}
-                </div>
-            ) : (
-                <div className="text-center py-8 text-gray-500">
-                    <p>Detailed stats not available for this game.</p>
-                </div>
-            )}
-        </div>
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white bg-black/50 p-2 rounded-full transition z-10">✕</button>
+        <div className="bg-gradient-to-b from-slate-800 to-slate-900 p-6 text-center border-b border-slate-700"><div className="text-gray-400 text-xs uppercase tracking-widest mb-4 font-bold">{game.dateString} • {game.venue}</div><div className="flex justify-center items-center gap-8 md:gap-12"><div className="flex flex-col items-center"><img src={game.opponent.logo} className="w-16 h-16 object-contain mb-2" alt="Opp"/><span className="text-xl font-black text-white">{game.opponent.score}</span></div><div className="text-2xl font-black text-gray-600 italic">VS</div><div className="flex flex-col items-center"><img src={game.patriots.logo} className="w-16 h-16 object-contain mb-2" alt="Pats"/><span className="text-xl font-black text-white">{game.patriots.score}</span></div></div></div>
+        <div className="p-6"><h3 className="text-center text-blue-400 text-xs font-bold uppercase tracking-[0.2em] mb-4">Official Game Stats</h3>{teamStats.length === 2 ? <div className="bg-slate-800/50 rounded-xl overflow-hidden border border-slate-700"><div className="grid grid-cols-3 bg-slate-950/50 p-3 text-[10px] uppercase font-bold text-gray-500 text-center border-b border-slate-700"><div>{teamStats[0].name}</div><div>Stat</div><div>{teamStats[1].name}</div></div>{[{ label: "Total Yards", key: "yards" }, { label: "Passing Yards", key: "passing" }, { label: "Rushing Yards", key: "rushing" }, { label: "1st Downs", key: "firstDowns" }, { label: "Turnovers", key: "turnovers" }, { label: "Possession", key: "possession" }].map((row, i) => (<div key={i} className="grid grid-cols-3 p-3 text-sm text-center border-b border-slate-700/50 last:border-0 hover:bg-slate-700/20"><div className="font-mono font-bold text-white">{teamStats[0][row.key]}</div><div className="text-gray-400 text-xs uppercase">{row.label}</div><div className="font-mono font-bold text-white">{teamStats[1][row.key]}</div></div>))}</div> : <div className="text-center py-8 text-gray-500"><p>Detailed stats not available.</p></div>}</div>
       </div>
     </div>
   );
 }
 
-// --- LISTA DE JUGADORES ---
-function RosterList({ players }) {
-  const [search, setSearch] = useState("");
-  const [selectedPlayer, setSelectedPlayer] = useState(null); 
-  
-  if (!players || players.length === 0) return null; 
-
-  const filteredPlayers = players.filter(p => 
-     (p.displayName && p.displayName.toLowerCase().includes(search.toLowerCase())) || 
-     (p.position && p.position.name && p.position.name.toLowerCase().includes(search.toLowerCase()))
-  );
-
-  return (
-    <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-       {selectedPlayer && (
-          <PlayerModal player={selectedPlayer} onClose={() => setSelectedPlayer(null)} />
-       )}
-
-       <div className="mb-6 sticky top-0 bg-[#050B14] z-10 py-2">
-          <input 
-            type="text" 
-            placeholder="Search player by name or position..." 
-            className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-       </div>
-
-       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {filteredPlayers.map((player, i) => (
-             <button 
-                key={player.id || player.playerId || i} 
-                onClick={() => setSelectedPlayer(player)} 
-                className="bg-slate-800 rounded-lg overflow-hidden border border-slate-700 hover:border-blue-500 hover:scale-[1.02] transition group relative text-left w-full focus:outline-none"
-             >
-                <div className="h-2 bg-gradient-to-r from-blue-900 to-red-900"></div>
-                <div className="p-4 flex flex-col items-center">
-                   <div className="w-16 h-16 rounded-full bg-slate-700 mb-3 overflow-hidden border-2 border-slate-600 group-hover:border-blue-400 transition">
-                      <img 
-                        src={player.headshot?.href || player.href || "https://static.www.nfl.com/image/private/f_auto,q_auto/league/nfl-placeholder"} 
-                        alt={player.displayName} 
-                        className="w-full h-full object-cover"
-                        onError={(e) => { e.target.onerror = null; e.target.src = "https://static.www.nfl.com/image/private/f_auto,q_auto/league/nfl-placeholder"; }}
-                      />
-                   </div>
-                   <h4 className="font-bold text-sm text-center text-white">{player.displayName || "Unknown Player"}</h4>
-                   <p className="text-xs text-blue-400 font-bold mt-1">{player.position?.abbreviation || player.position?.name || "N/A"}</p>
-                   
-                   <div className="flex gap-2 mt-3 text-[10px] text-gray-500 uppercase font-bold">
-                      <span className="bg-slate-900 px-2 py-1 rounded">#{player.jersey || "--"}</span>
-                   </div>
-                </div>
-             </button>
-          ))}
-       </div>
-       {filteredPlayers.length === 0 && <p className="text-center text-gray-500 mt-10">No players found matching "{search}"</p>}
-    </div>
-  );
-}
-
-// --- COMPONENTE PRINCIPAL ---
+// --- COMPONENTE PRINCIPAL (FIXED) ---
 
 export default function DashboardTabs({ history, nextGame, upcoming, news, players, debugData, leaders, injuries, standings }) {
   const [activeTab, setActiveTab] = useState('next');
@@ -624,10 +472,10 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
   const [selectedHistoryGame, setSelectedHistoryGame] = useState(null);
   const [historyGameStats, setHistoryGameStats] = useState(null);
 
-  // ✅ AQUÍ ESTÁ EL CAMBIO CLAVE: ORDENAMIENTO POR FECHA
+  // ✅ CORRECCIÓN 1: ORDENAR POR FECHA REAL + ETIQUETA ÚNICA
   const seasonChartData = history ? [...history]
-      .sort((a, b) => new Date(a.dateRaw) - new Date(b.dateRaw)) // Ordenamos de más antiguo a más reciente
-      .map(game => {
+      .sort((a, b) => new Date(a.dateRaw).getTime() - new Date(b.dateRaw).getTime()) // 1. Ordenar por fecha (timestamp)
+      .map((game, index) => {
           const patsScore = parseInt(game.patriots.score) || 0;
           const oppScore = parseInt(game.opponent.score) || 0;
           const diff = patsScore - oppScore;
@@ -636,6 +484,8 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
               date: game.dateString,
               opponent: game.opponent.name,
               oppCode: game.opponent.name.substring(0, 3).toUpperCase(),
+              // 2. Crear ID único para evitar que Recharts agrupe los "JET" repetidos
+              uniqueId: `${game.opponent.name.substring(0, 3).toUpperCase()}_${index}`, 
               diff: diff,
               score: `${patsScore}-${oppScore}`
           };
@@ -685,22 +535,11 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
 
   return (
     <div className="w-full">
-      {selectedHistoryGame && (
-          <GameStatsModal 
-            game={selectedHistoryGame} 
-            stats={historyGameStats} 
-            onClose={() => setSelectedHistoryGame(null)} 
-          />
-      )}
+      {selectedHistoryGame && <GameStatsModal game={selectedHistoryGame} stats={historyGameStats} onClose={() => setSelectedHistoryGame(null)} />}
 
       <div className="flex border-b border-slate-700 mb-6 bg-slate-900/50 rounded-t-xl overflow-hidden overflow-x-auto">
         {['history', 'next', 'upcoming', 'roster'].map((tab) => (
-          <button 
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`flex-1 min-w-[100px] py-4 text-xs md:text-sm font-bold tracking-wider uppercase transition-colors whitespace-nowrap
-              ${activeTab === tab ? 'bg-slate-800 text-blue-400 border-b-2 border-blue-400' : 'text-gray-500 hover:text-white hover:bg-slate-800'}`}
-          >
+          <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 min-w-[100px] py-4 text-xs md:text-sm font-bold tracking-wider uppercase transition-colors whitespace-nowrap ${activeTab === tab ? 'bg-slate-800 text-blue-400 border-b-2 border-blue-400' : 'text-gray-500 hover:text-white hover:bg-slate-800'}`}>
             {tab === 'history' ? 'History' : tab === 'roster' ? 'Team Roster' : tab === 'upcoming' ? 'Upcoming' : tab}
           </button>
         ))}
@@ -709,35 +548,16 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
       <div className="min-h-[400px]">
         {activeTab === 'history' && (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-            {/* GRÁFICO DE PERFORMANCE DE TEMPORADA */}
             <SeasonPerformanceChart data={seasonChartData} />
-
             <NewsSection news={news} />
             <div className="space-y-3">
               {history.length > 0 ? history.map(game => (
-                 <button 
-                    key={game.id} 
-                    onClick={() => handleHistoryClick(game)}
-                    className="w-full flex items-center justify-between bg-slate-800 p-4 rounded-lg border border-slate-700 hover:bg-slate-700 hover:border-blue-500 transition group text-left"
-                 >
-                    <div className="flex flex-col w-20">
-                        <span className="text-gray-400 text-xs font-bold">{game.dateString}</span>
-                        <span className={`text-[10px] uppercase font-bold mt-1 ${parseInt(game.patriots.score) > parseInt(game.opponent.score) ? 'text-green-400' : 'text-red-400'}`}>
-                          {game.status}
-                        </span>
-                    </div>
+                 <button key={game.id} onClick={() => handleHistoryClick(game)} className="w-full flex items-center justify-between bg-slate-800 p-4 rounded-lg border border-slate-700 hover:bg-slate-700 hover:border-blue-500 transition group text-left">
+                    <div className="flex flex-col w-20"><span className="text-gray-400 text-xs font-bold">{game.dateString}</span><span className={`text-[10px] uppercase font-bold mt-1 ${parseInt(game.patriots.score) > parseInt(game.opponent.score) ? 'text-green-400' : 'text-red-400'}`}>{game.status}</span></div>
                     <div className="flex items-center justify-center gap-3 flex-1 mx-2">
-                        <div className="flex items-center gap-2 justify-end min-w-[80px] md:min-w-[120px]">
-                            <span className="text-gray-400 text-[10px] md:text-xs font-bold uppercase hidden md:block truncate">{game.opponent.name}</span>
-                            <img src={game.opponent.logo} className="w-8 h-8 object-contain" alt="Opp" />
-                        </div>
-                        <div className="font-mono font-black text-white text-sm bg-slate-950/50 px-2 py-1 rounded whitespace-nowrap border border-slate-700/50">
-                            {game.opponent.score} - {game.patriots.score}
-                        </div>
-                        <div className="flex items-center gap-2 justify-start min-w-[80px] md:min-w-[120px]">
-                            <img src={game.patriots.logo} className="w-8 h-8 object-contain" alt="Pats" />
-                            <span className="text-blue-400 text-[10px] md:text-xs font-bold uppercase hidden md:block truncate">{game.patriots.name}</span>
-                        </div>
+                        <div className="flex items-center gap-2 justify-end min-w-[80px] md:min-w-[120px]"><span className="text-gray-400 text-[10px] md:text-xs font-bold uppercase hidden md:block truncate">{game.opponent.name}</span><img src={game.opponent.logo} className="w-8 h-8 object-contain" alt="Opp" /></div>
+                        <div className="font-mono font-black text-white text-sm bg-slate-950/50 px-2 py-1 rounded whitespace-nowrap border border-slate-700/50">{game.opponent.score} - {game.patriots.score}</div>
+                        <div className="flex items-center gap-2 justify-start min-w-[80px] md:min-w-[120px]"><img src={game.patriots.logo} className="w-8 h-8 object-contain" alt="Pats" /><span className="text-blue-400 text-[10px] md:text-xs font-bold uppercase hidden md:block truncate">{game.patriots.name}</span></div>
                     </div>
                  </button>
               )) : <div className="text-center p-10 text-gray-500">No games completed yet.</div>}
@@ -746,7 +566,7 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
           </div>
         )}
 
-        {/* --- PESTAÑAS NEXT, UPCOMING, ROSTER (Sin cambios) --- */}
+        {/* RESTO DE LOS TABS SE MANTIENEN IGUAL (NEXT, UPCOMING, ROSTER) */}
         {activeTab === 'next' && (
           <div className="animate-in fade-in zoom-in duration-500">
              {displayGame ? (
