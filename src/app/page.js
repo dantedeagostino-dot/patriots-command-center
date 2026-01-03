@@ -3,7 +3,6 @@ import { processSchedule, getGameInfo } from '../lib/utils';
 import DashboardTabs from '../components/DashboardTabs';
 
 export default async function Home() {
-  // 1. Obtener datos en paralelo
   const [scheduleRaw, newsRaw, standingsRaw, playersRaw] = await Promise.all([
     getPatriotsSchedule(),
     getTeamNews(),
@@ -11,17 +10,13 @@ export default async function Home() {
     getTeamPlayers()
   ]);
 
-  // --- DEBUG: Ver en los logs de Vercel qué llega realmente ---
-  console.log("🔍 API ROSTER RESPONSE:", JSON.stringify(playersRaw, null, 2));
-
-  // 2. Procesar Calendario
+  // Procesar Calendario
   const { history, next, upcoming } = processSchedule(scheduleRaw);
-  
   const historyFormatted = history.map(game => getGameInfo(game)).filter(Boolean);
   const nextGameFormatted = getGameInfo(next);
   const upcomingFormatted = upcoming.map(game => getGameInfo(game)).filter(Boolean);
 
-  // 3. Procesar Noticias
+  // Procesar Noticias
   let cleanNews = [];
   let rawList = [];
   if (Array.isArray(newsRaw)) rawList = newsRaw;
@@ -39,27 +34,24 @@ export default async function Home() {
      cleanNews = [{ title: "Check official site for latest updates", link: "https://www.patriots.com/news/", source: "System", pubDate: new Date().toISOString() }];
   }
 
-  // 4. Procesar Récord de Temporada
+  // Procesar Récord
   let seasonRecord = "0-0";
   try {
      if (nextGameFormatted?.patriots?.record && nextGameFormatted.patriots.record !== "0-0") {
         seasonRecord = nextGameFormatted.patriots.record;
      }
-  } catch (e) {
-     console.error("Error parsing standings", e);
-  }
+  } catch (e) { console.error(e); }
 
-  // 5. PROCESAR ROSTER (Lógica más robusta)
+  // 5. PROCESAR ROSTER (Actualizado según Doc)
   let finalRoster = [];
   if (playersRaw) {
-      if (Array.isArray(playersRaw)) {
+      // La documentación dice que viene en la propiedad "data"
+      if (playersRaw.data && Array.isArray(playersRaw.data)) {
+          finalRoster = playersRaw.data; 
+      } else if (Array.isArray(playersRaw)) {
           finalRoster = playersRaw;
       } else if (playersRaw.teamPlayers) {
           finalRoster = playersRaw.teamPlayers;
-      } else if (playersRaw.athletes) {
-          finalRoster = playersRaw.athletes; // Estructura común en APIs de ESPN
-      } else if (playersRaw.items) {
-          finalRoster = playersRaw.items;
       }
   }
 
@@ -98,6 +90,7 @@ export default async function Home() {
               upcoming={upcomingFormatted}
               news={cleanNews}
               players={finalRoster}
+              debugData={playersRaw}
            />
       </div>
     </main>
