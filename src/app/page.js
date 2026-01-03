@@ -4,15 +4,14 @@ import {
   getStandings, 
   getTeamPlayers, 
   getBasicRoster,
-  getTeamLeaders,  // <--- Importante para los nuevos widgets
-  getTeamInjuries  // <--- Importante para los nuevos widgets
+  getTeamLeaders,  
+  getTeamInjuries
 } from '../lib/nflApi';
 import { processSchedule, getGameInfo } from '../lib/utils';
 import DashboardTabs from '../components/DashboardTabs';
 
 export default async function Home() {
   // 1. OBTENCIÓN DE DATOS SEGURA
-  // Usamos un try/catch global y valores por defecto null para evitar roturas
   let scheduleRaw, newsRaw, standingsRaw, playersRaw, leadersRaw, injuriesRaw;
 
   try {
@@ -28,12 +27,11 @@ export default async function Home() {
     console.error("Critical API Error:", error);
   }
 
-  // PLAN B: Si el roster falla, intentamos el básico
+  // PLAN B: Si el roster falla
   if (!playersRaw) {
       try {
-        console.log("⚠️ Roster completo falló, usando básico...");
         playersRaw = await getBasicRoster();
-      } catch (e) { console.error("Roster fallback failed", e); }
+      } catch (e) { console.error(e); }
   }
 
   // 2. Procesar Calendario
@@ -46,8 +44,6 @@ export default async function Home() {
   let cleanNews = [];
   let rawList = [];
   
-  // Validamos estrictamente que sea un array antes de asignarlo
-  // Esto arregla el error "b.map is not a function"
   if (Array.isArray(newsRaw)) {
       rawList = newsRaw;
   } else if (newsRaw?.data && Array.isArray(newsRaw.data)) {
@@ -56,7 +52,6 @@ export default async function Home() {
       rawList = newsRaw.articles;
   }
 
-  // Solo ejecutamos .map si rawList es un array válido y tiene elementos
   if (Array.isArray(rawList) && rawList.length > 0) {
       cleanNews = rawList.map(item => ({
          title: item.headline || item.title || "Patriots News",
@@ -127,8 +122,8 @@ export default async function Home() {
               upcoming={upcomingFormatted}
               news={cleanNews}
               players={finalRoster}
-              leaders={leadersRaw}   // <--- Se pasan los datos
-              injuries={injuriesRaw} // <--- Se pasan los datos
+              leaders={leadersRaw}   
+              injuries={injuriesRaw} 
            />
       </div>
     </main>
