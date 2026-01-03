@@ -51,12 +51,12 @@ export async function getTeamPlayers() {
 export async function getBasicRoster() {
   return await fetchFromNFL('players/id', `teamId=${PATRIOTS_ID}`);
 }
-// CORRECCIÓN: Usar player-overview para el modal
+// Usamos player-overview para el modal (más robusto)
 export async function getPlayerStats(playerId) {
   return await fetchFromNFL('player-overview', `playerId=${playerId}`);
 }
 
-// 5. NUEVOS DATOS TÁCTICOS
+// 5. NUEVOS DATOS TÁCTICOS (Faltaban estos)
 export async function getTeamLeaders() {
   return await fetchFromNFL('team/leaders', `teamId=${PATRIOTS_ID}&season=2024&limit=3`);
 }
