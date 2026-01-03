@@ -4,25 +4,25 @@ import {
   getStandings, 
   getTeamPlayers, 
   getBasicRoster,
-  getTeamLeaders,  // Aseguramos estos imports
-  getTeamInjuries
+  getTeamLeaders,  // <--- Importante para los nuevos widgets
+  getTeamInjuries  // <--- Importante para los nuevos widgets
 } from '../lib/nflApi';
 import { processSchedule, getGameInfo } from '../lib/utils';
 import DashboardTabs from '../components/DashboardTabs';
 
 export default async function Home() {
   // 1. OBTENCIÓN DE DATOS SEGURA
-  // Usamos try/catch y valores por defecto para que UN fallo no rompa toda la app
+  // Usamos un try/catch global y valores por defecto null para evitar roturas
   let scheduleRaw, newsRaw, standingsRaw, playersRaw, leadersRaw, injuriesRaw;
 
   try {
     [scheduleRaw, newsRaw, standingsRaw, playersRaw, leadersRaw, injuriesRaw] = await Promise.all([
-      getPatriotsSchedule().catch(err => null),
-      getTeamNews().catch(err => null),
-      getStandings().catch(err => null),
-      getTeamPlayers().catch(err => null),
-      getTeamLeaders().catch(err => null),
-      getTeamInjuries().catch(err => null)
+      getPatriotsSchedule().catch(e => null),
+      getTeamNews().catch(e => null),
+      getStandings().catch(e => null),
+      getTeamPlayers().catch(e => null),
+      getTeamLeaders().catch(e => null),
+      getTeamInjuries().catch(e => null)
     ]);
   } catch (error) {
     console.error("Critical API Error:", error);
@@ -33,7 +33,7 @@ export default async function Home() {
       try {
         console.log("⚠️ Roster completo falló, usando básico...");
         playersRaw = await getBasicRoster();
-      } catch (e) { console.error(e); }
+      } catch (e) { console.error("Roster fallback failed", e); }
   }
 
   // 2. Procesar Calendario
@@ -47,6 +47,7 @@ export default async function Home() {
   let rawList = [];
   
   // Validamos estrictamente que sea un array antes de asignarlo
+  // Esto arregla el error "b.map is not a function"
   if (Array.isArray(newsRaw)) {
       rawList = newsRaw;
   } else if (newsRaw?.data && Array.isArray(newsRaw.data)) {
@@ -65,7 +66,6 @@ export default async function Home() {
       }));
   }
 
-  // Fallback si no hay noticias
   if (cleanNews.length === 0) {
      cleanNews = [{ title: "Check official site for latest updates", link: "https://www.patriots.com/news/", source: "System", pubDate: new Date().toISOString() }];
   }
@@ -127,8 +127,8 @@ export default async function Home() {
               upcoming={upcomingFormatted}
               news={cleanNews}
               players={finalRoster}
-              leaders={leadersRaw}   
-              injuries={injuriesRaw} 
+              leaders={leadersRaw}   // <--- Se pasan los datos
+              injuries={injuriesRaw} // <--- Se pasan los datos
            />
       </div>
     </main>
