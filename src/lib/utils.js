@@ -1,7 +1,16 @@
 // src/lib/utils.js
 
-// URL de respaldo segura (Wikimedia Commons)
+// URL de respaldo general
 const NFL_LOGO = "https://upload.wikimedia.org/wikipedia/en/thumb/a/a2/National_Football_League_logo.svg/1200px-National_Football_League_logo.svg.png";
+
+// ✅ DICCIONARIO DE LOGOS OFICIALES HD
+const OFFICIAL_LOGOS = {
+  '17': "https://upload.wikimedia.org/wikipedia/en/thumb/b/b9/New_England_Patriots_logo.svg/1200px-New_England_Patriots_logo.svg.png", // New England Patriots
+  '15': "https://upload.wikimedia.org/wikipedia/en/thumb/3/37/Miami_Dolphins_logo.svg/1200px-Miami_Dolphins_logo.svg.png",       // Miami Dolphins
+  // Puedes añadir más equipos aquí si quieres:
+  // '2': "URL_BUFFALO_BILLS", 
+  // '20': "URL_NY_JETS",
+};
 
 export function processSchedule(scheduleData) {
   if (!scheduleData || !scheduleData.events) {
@@ -9,7 +18,7 @@ export function processSchedule(scheduleData) {
   }
 
   const events = scheduleData.events;
-  const now = new Date(); // Fecha actual real
+  const now = new Date();
 
   // 1. Asegurar que las fechas sean objetos Date válidos y ordenar
   events.sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -22,29 +31,25 @@ export function processSchedule(scheduleData) {
     const gameDate = new Date(game.date);
     const statusType = game.status?.type;
     
-    // Un juego es "History" SOLO si ya terminó (status completed)
+    // Un juego es "History" SOLO si ya terminó
     if (statusType?.completed) {
       history.push(game);
       continue;
     }
 
-    // Si no ha terminado, miramos la fecha.
-    // Si la fecha del juego es MENOR a hoy (y no está completed), es un error de la API o un juego cancelado, lo ignoramos o lo mandamos a history.
-    // Pero para estar seguros, el "Next" debe ser > Ahora.
-    
     if (gameDate > now) {
       if (!next) {
-        next = game; // El primer juego que encontramos en el futuro
+        next = game; // El primer juego futuro es el "Next"
       } else {
-        upcoming.push(game); // Los siguientes son upcoming
+        upcoming.push(game); // El resto son "Upcoming"
       }
     } else {
-      // Si la fecha ya pasó pero no está "completed", podría ser el que se está jugando AHORA MISMO
+      // Si la fecha ya pasó pero no está completed, puede estar en juego
       const state = statusType?.state;
       if (state === 'in' || state === 'in-progress') {
-         next = game; // Es el juego en vivo
+         next = game;
       } else {
-         history.push(game); // Asumimos que ya pasó
+         history.push(game);
       }
     }
   }
@@ -60,6 +65,7 @@ export function getGameInfo(game) {
   if (!competition) return null;
 
   const competitors = competition.competitors || [];
+  // Identificamos a los Patriots por su ID '17'
   const patriots = competitors.find(c => c.team.id === '17') || competitors[0];
   const opponent = competitors.find(c => c.team.id !== '17') || competitors[1];
 
@@ -70,18 +76,26 @@ export function getGameInfo(game) {
   // Función segura para obtener score
   const getScore = (competitor) => {
     if (!competitor) return "0";
-    // Si viene null o undefined
     if (!competitor.score) return "0";
-    // Si es objeto
     if (typeof competitor.score === 'object') {
        return competitor.score.displayValue || competitor.score.value || "0";
     }
     return competitor.score.toString();
   };
 
-  // Función segura para obtener Logo
+  // ✅ FUNCIÓN MEJORADA PARA OBTENER LOGO
   const getLogo = (competitor) => {
-      return competitor?.team?.logo || NFL_LOGO;
+      const teamId = competitor?.team?.id;
+      // 1. Si tenemos un logo oficial en nuestra lista, úsalo
+      if (teamId && OFFICIAL_LOGOS[teamId]) {
+          return OFFICIAL_LOGOS[teamId];
+      }
+      // 2. Si no, usa el que viene de la API
+      if (competitor?.team?.logo) {
+          return competitor.team.logo;
+      }
+      // 3. Si todo falla, usa el logo de la NFL
+      return NFL_LOGO;
   };
 
   return {
@@ -95,14 +109,14 @@ export function getGameInfo(game) {
     isLive: game.status?.type?.state === 'in', 
     patriots: {
       score: getScore(patriots),
-      logo: getLogo(patriots),
+      logo: getLogo(patriots), // <--- Aquí usará el logo oficial
       name: patriots.team?.shortDisplayName || "Pats",
       record: patriots.records?.[0]?.summary || "0-0",
       isHome: patriots.homeAway === 'home'
     },
     opponent: {
       score: getScore(opponent),
-      logo: getLogo(opponent),
+      logo: getLogo(opponent), // <--- Aquí también
       name: opponent.team?.shortDisplayName || "Opponent",
       record: opponent.records?.[0]?.summary || "0-0"
     }
