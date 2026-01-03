@@ -135,7 +135,7 @@ function NewsSection({ news }) {
   );
 }
 
-// --- NUEVO: WIDGET DE POSICIONES ---
+// --- WIDGET DE POSICIONES ---
 function StandingsWidget({ standings }) {
   if (!standings) return null;
 
@@ -379,7 +379,7 @@ function PlayerModal({ player, onClose }) {
   );
 }
 
-// --- NUEVO: MODAL DE ESTADÍSTICAS DE JUEGO (GAME STATS) ---
+// --- MODAL DE ESTADÍSTICAS DE JUEGO (GAME STATS) ---
 function GameStatsModal({ game, stats, onClose }) {
   if (!game) return null;
 
@@ -591,15 +591,31 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
                     onClick={() => handleHistoryClick(game)}
                     className="w-full flex items-center justify-between bg-slate-800 p-4 rounded-lg border border-slate-700 hover:bg-slate-700 hover:border-blue-500 transition group text-left"
                  >
-                    <span className="text-gray-400 text-xs w-20 group-hover:text-white transition">{game.dateString}</span>
-                    <div className="flex items-center gap-4 font-bold">
-                      <img src={game.opponent.logo} className="w-6 h-6 object-contain" alt="Opp" />
-                      <span>{game.patriots.score} - {game.opponent.score}</span>
-                      <img src={game.patriots.logo} className="w-6 h-6 object-contain" alt="Pats" />
+                    {/* Fecha y Estado */}
+                    <div className="flex flex-col w-20">
+                        <span className="text-gray-400 text-xs font-bold">{game.dateString}</span>
+                        <span className={`text-[10px] uppercase font-bold mt-1 ${parseInt(game.patriots.score) > parseInt(game.opponent.score) ? 'text-green-400' : 'text-red-400'}`}>{game.status}</span>
                     </div>
-                    <span className={`text-[10px] uppercase font-bold w-20 text-right ${parseInt(game.patriots.score) > parseInt(game.opponent.score) ? 'text-green-400' : 'text-red-400'}`}>
-                      {game.status}
-                    </span>
+
+                    {/* Logos, Nombres y Score - Diseño Refinado */}
+                    <div className="flex items-center justify-center gap-3 flex-1 mx-2">
+                        {/* Oponente */}
+                        <div className="flex items-center gap-2 justify-end min-w-[80px] md:min-w-[120px]">
+                            <span className="text-gray-400 text-[10px] md:text-xs font-bold uppercase hidden md:block truncate">{game.opponent.name}</span>
+                            <img src={game.opponent.logo} className="w-8 h-8 object-contain" alt="Opp" />
+                        </div>
+
+                        {/* Score */}
+                        <div className="font-mono font-black text-white text-sm bg-slate-950/50 px-2 py-1 rounded whitespace-nowrap border border-slate-700/50">
+                            {game.opponent.score} - {game.patriots.score}
+                        </div>
+
+                        {/* Patriots */}
+                        <div className="flex items-center gap-2 justify-start min-w-[80px] md:min-w-[120px]">
+                            <img src={game.patriots.logo} className="w-8 h-8 object-contain" alt="Pats" />
+                            <span className="text-blue-400 text-[10px] md:text-xs font-bold uppercase hidden md:block truncate">{game.patriots.name}</span>
+                        </div>
+                    </div>
                  </button>
               )) : <div className="text-center p-10 text-gray-500">No games completed yet.</div>}
             </div>
