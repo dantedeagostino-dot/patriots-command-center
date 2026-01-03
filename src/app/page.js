@@ -4,35 +4,36 @@ import {
   getStandings, 
   getTeamPlayers, 
   getBasicRoster,
-  getTeamLeaders,  // <--- Importante para los nuevos widgets
-  getTeamInjuries  // <--- Importante para los nuevos widgets
+  getTeamLeaders,  // Aseguramos estos imports
+  getTeamInjuries
 } from '../lib/nflApi';
 import { processSchedule, getGameInfo } from '../lib/utils';
 import DashboardTabs from '../components/DashboardTabs';
 
 export default async function Home() {
-  // 1. Obtener TODOS los datos (incluyendo líderes y lesiones)
-  // Usamos un try/catch global para que un fallo en la API no rompa toda la página
+  // 1. OBTENCIÓN DE DATOS SEGURA
+  // Usamos try/catch y valores por defecto para que UN fallo no rompa toda la app
   let scheduleRaw, newsRaw, standingsRaw, playersRaw, leadersRaw, injuriesRaw;
-  
+
   try {
     [scheduleRaw, newsRaw, standingsRaw, playersRaw, leadersRaw, injuriesRaw] = await Promise.all([
-      getPatriotsSchedule(),
-      getTeamNews(),
-      getStandings(),
-      getTeamPlayers(),
-      getTeamLeaders(),
-      getTeamInjuries()
+      getPatriotsSchedule().catch(err => null),
+      getTeamNews().catch(err => null),
+      getStandings().catch(err => null),
+      getTeamPlayers().catch(err => null),
+      getTeamLeaders().catch(err => null),
+      getTeamInjuries().catch(err => null)
     ]);
   } catch (error) {
-    console.error("Error fetching data:", error);
+    console.error("Critical API Error:", error);
   }
 
   // PLAN B: Si el roster falla, intentamos el básico
   if (!playersRaw) {
       try {
+        console.log("⚠️ Roster completo falló, usando básico...");
         playersRaw = await getBasicRoster();
-      } catch (e) { console.error("Roster fallback failed", e); }
+      } catch (e) { console.error(e); }
   }
 
   // 2. Procesar Calendario
@@ -41,11 +42,11 @@ export default async function Home() {
   const nextGameFormatted = getGameInfo(next);
   const upcomingFormatted = upcoming.map(game => getGameInfo(game)).filter(Boolean);
 
-  // 3. Procesar Noticias (BLINDADO CONTRA ERRORES)
+  // 3. Procesar Noticias (CORRECCIÓN CRÍTICA: Validar Array)
   let cleanNews = [];
   let rawList = [];
   
-  // Validamos estrictamente que la respuesta sea un array antes de usarla
+  // Validamos estrictamente que sea un array antes de asignarlo
   if (Array.isArray(newsRaw)) {
       rawList = newsRaw;
   } else if (newsRaw?.data && Array.isArray(newsRaw.data)) {
@@ -54,7 +55,7 @@ export default async function Home() {
       rawList = newsRaw.articles;
   }
 
-  // Solo hacemos .map si realmente es un array con datos
+  // Solo ejecutamos .map si rawList es un array válido y tiene elementos
   if (Array.isArray(rawList) && rawList.length > 0) {
       cleanNews = rawList.map(item => ({
          title: item.headline || item.title || "Patriots News",
@@ -126,8 +127,8 @@ export default async function Home() {
               upcoming={upcomingFormatted}
               news={cleanNews}
               players={finalRoster}
-              leaders={leadersRaw}   // <--- Se lo pasamos al componente
-              injuries={injuriesRaw} // <--- Se lo pasamos al componente
+              leaders={leadersRaw}   
+              injuries={injuriesRaw} 
            />
       </div>
     </main>
