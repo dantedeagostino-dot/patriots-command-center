@@ -135,10 +135,14 @@ function NewsSection({ news }) {
   );
 }
 
-// --- NUEVOS WIDGETS TÁCTICOS ---
+// --- WIDGETS TÁCTICOS BLINDADOS (CORRECCIÓN AQUÍ) ---
 
 function InjuryReportWidget({ injuries }) {
-  const list = injuries?.injuries || injuries || [];
+  // Extracción segura: Busca la lista en 'data.injuries', o 'injuries', o devuelve array vacío
+  // Si 'injuries' es un error o null, esto devuelve [] y evita el crash.
+  const rawList = injuries?.data?.injuries || injuries?.injuries || injuries || [];
+  const list = Array.isArray(rawList) ? rawList : [];
+
   if (list.length === 0) return null;
 
   return (
@@ -180,7 +184,10 @@ function InjuryReportWidget({ injuries }) {
 }
 
 function SeasonLeadersWidget({ leaders }) {
-  const categories = leaders?.leaders || leaders || [];
+  // Extracción segura para líderes
+  const rawList = leaders?.data || leaders?.leaders || leaders || [];
+  const categories = Array.isArray(rawList) ? rawList : [];
+
   if (categories.length === 0) return null;
 
   return (
@@ -216,7 +223,7 @@ function SeasonLeadersWidget({ leaders }) {
   );
 }
 
-// --- MODAL DE JUGADOR (CON SOPORTE PARA SIN-STATS) ---
+// --- MODAL DE JUGADOR ---
 function PlayerModal({ player, onClose }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -555,7 +562,7 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
                           <Countdown targetDate={displayGame.dateRaw} />
                        </div>
                        
-                       {/* --- WIDGETS TÁCTICOS (Líderes y Lesiones) --- */}
+                       {/* --- WIDGETS TÁCTICOS BLINDADOS --- */}
                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
                           <SeasonLeadersWidget leaders={leaders} />
                           <InjuryReportWidget injuries={injuries} />
@@ -571,7 +578,6 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
         {/* --- PESTAÑA UPCOMING AÑADIDA CON EFECTO VISUAL --- */}
         {activeTab === 'upcoming' && (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 relative">
-             {/* TITULAR 2026 CON EFECTO DE SCAN */}
              <div className="text-center mb-8 relative p-6 bg-slate-900/40 rounded-2xl border border-slate-800 overflow-hidden group">
                 <div className="absolute top-0 left-[-100%] w-full h-full bg-gradient-to-r from-transparent via-blue-500/10 to-transparent skew-x-12 animate-[shimmer_3s_infinite]"></div>
                 <h3 className="text-3xl font-black text-white italic tracking-tighter drop-shadow-lg">
