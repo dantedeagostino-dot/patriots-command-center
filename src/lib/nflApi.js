@@ -55,7 +55,7 @@ export async function getBasicRoster() {
 
 // 5. ESTADÍSTICAS DE JUGADOR (NUEVO)
 export async function getPlayerStats(playerId) {
-  return await fetchFromNFL('nfl-player-statistic', `playerId=${playerId}`);
+  return await fetchFromNFL('player-overview', `playerId=${playerId}`);
 }
 
 // --- MODO EN VIVO ---
