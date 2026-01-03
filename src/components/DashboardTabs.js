@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import ScoreTrendChart from './ScoreTrendChart';
 
 // --- CONFIGURACIÓN ---
-const TEST_LIVE_MODE = true; // ⚠️ EN TRUE PARA PRUEBAS (Poner en false el día del partido)
+const TEST_LIVE_MODE = false; // ⚠️ EN TRUE PARA PRUEBAS (Poner en false el día del partido)
 const POLLING_INTERVAL = 15000; 
 
 // --- MOCKS CON DATOS (Para ver la simulación completa) ---
