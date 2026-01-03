@@ -122,7 +122,8 @@ export default async function Home() {
               news={cleanNews}
               players={finalRoster}
               leaders={leadersRaw}   
-              injuries={injuriesRaw} 
+              injuries={injuriesRaw}
+              standings={standingsRaw} 
            />
       </div>
     </main>
