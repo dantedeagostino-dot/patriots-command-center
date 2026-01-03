@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import ScoreTrendChart from './ScoreTrendChart';
 
 // --- CONFIGURACIÓN ---
-const TEST_LIVE_MODE = true; 
-const POLLING_INTERVAL = 30000; 
+const TEST_LIVE_MODE = false; 
+const POLLING_INTERVAL = 15000; 
 
 // --- MOCKS (Para simulación) ---
 const MOCK_PLAYS = [
@@ -140,29 +140,45 @@ function NewsSection({ news }) {
   );
 }
 
-// --- NUEVO COMPONENTE: MODAL DE ESTADÍSTICAS ---
+// --- MODAL DE ESTADÍSTICAS CORREGIDO ---
 function PlayerModal({ player, onClose }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  // ✅ CORRECCIÓN CLAVE: Usamos 'playerId' si existe, o 'id' como respaldo.
+  // Según tu documento API Overview, el campo es 'playerId'.
+  const validId = player.playerId || player.id;
 
   useEffect(() => {
-    if (player?.id) {
+    if (validId) {
       setLoading(true);
-      fetch(`/api/player?id=${player.id}`)
-        .then(res => res.json())
+      setErrorMsg("");
+      fetch(`/api/player?id=${validId}`)
+        .then(res => {
+            if(!res.ok) throw new Error("Error fetching data");
+            return res.json();
+        })
         .then(data => {
           setStats(data);
           setLoading(false);
         })
-        .catch(() => setLoading(false));
+        .catch(err => {
+            console.error(err);
+            setErrorMsg("Connection failed");
+            setLoading(false);
+        });
+    } else {
+        setErrorMsg("Invalid Player ID");
+        setLoading(false);
     }
-  }, [player]);
+  }, [validId]);
 
   if (!player) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl relative">
+      <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl relative max-h-[90vh] overflow-y-auto">
         
         {/* Botón Cerrar */}
         <button 
@@ -192,11 +208,11 @@ function PlayerModal({ player, onClose }) {
            {loading ? (
              <div className="flex flex-col items-center justify-center h-40 text-gray-500 gap-2">
                 <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                <p className="text-xs font-mono">Loading Stats...</p>
+                <p className="text-xs font-mono">Fetching data for ID: {validId}...</p>
              </div>
            ) : stats ? (
              <div className="space-y-4">
-                {/* Aquí renderizamos lo que devuelva la API de forma dinámica */}
+                {/* 1. INTENTO DE MOSTRAR STATS SI EXISTEN */}
                 {stats.items ? (
                    <div className="grid grid-cols-2 gap-4">
                       {stats.items.map((item, i) => (
@@ -207,18 +223,21 @@ function PlayerModal({ player, onClose }) {
                       ))}
                    </div>
                 ) : (
+                   /* 2. SI NO HAY ESTRUCTURA ESTÁNDAR, MOSTRAMOS LA DATA CRUDA (DEBUG) */
                    <div className="text-center">
-                      <p className="text-gray-400 text-sm mb-4">Season Statistics</p>
-                      {/* Fallback inteligente: muestra la data cruda bonita si no tiene formato estándar */}
-                      <pre className="text-left text-[10px] bg-black/50 p-4 rounded border border-slate-800 overflow-auto max-h-60 text-green-400 font-mono">
+                      <p className="text-blue-400 text-xs font-bold uppercase mb-2">Player Overview Data</p>
+                      {/* Aquí volcamos lo que llegue para verlo y poder maquetarlo luego */}
+                      <pre className="text-left text-[10px] bg-black p-4 rounded border border-slate-800 overflow-auto max-h-80 text-green-400 font-mono">
                         {JSON.stringify(stats, null, 2)}
                       </pre>
                    </div>
                 )}
              </div>
            ) : (
-             <div className="text-center text-gray-500 py-10">
-                <p>No statistics available for this player.</p>
+             <div className="text-center text-gray-500 py-10 bg-slate-950/50 rounded-xl border border-slate-800/50">
+                <p className="text-red-400 font-bold mb-2">No Data Returned</p>
+                <p className="text-xs font-mono">API ID Used: {validId}</p>
+                {errorMsg && <p className="text-xs text-red-500 mt-2">{errorMsg}</p>}
              </div>
            )}
         </div>
@@ -227,10 +246,10 @@ function PlayerModal({ player, onClose }) {
   );
 }
 
-// --- COMPONENTE: LISTA DE JUGADORES ACTUALIZADA ---
+// --- LISTA DE JUGADORES ---
 function RosterList({ players }) {
   const [search, setSearch] = useState("");
-  const [selectedPlayer, setSelectedPlayer] = useState(null); // Nuevo estado
+  const [selectedPlayer, setSelectedPlayer] = useState(null); 
   
   if (!players || players.length === 0) return null; 
 
@@ -241,7 +260,6 @@ function RosterList({ players }) {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-       {/* Modal (se muestra si hay un jugador seleccionado) */}
        {selectedPlayer && (
           <PlayerModal player={selectedPlayer} onClose={() => setSelectedPlayer(null)} />
        )}
@@ -259,8 +277,9 @@ function RosterList({ players }) {
        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {filteredPlayers.map((player, i) => (
              <button 
-                key={player.id || i} 
-                onClick={() => setSelectedPlayer(player)} // Al hacer clic, abrimos el modal
+                // ✅ CORRECCIÓN AQUÍ TAMBIÉN: Usar playerId si id falla
+                key={player.id || player.playerId || i} 
+                onClick={() => setSelectedPlayer(player)} 
                 className="bg-slate-800 rounded-lg overflow-hidden border border-slate-700 hover:border-blue-500 hover:scale-[1.02] transition group relative text-left w-full focus:outline-none"
              >
                 <div className="h-2 bg-gradient-to-r from-blue-900 to-red-900"></div>
