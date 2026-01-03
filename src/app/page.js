@@ -1,22 +1,29 @@
-import { getPatriotsSchedule, getTeamNews, getStandings, getTeamPlayers } from '../lib/nflApi';
+import { getPatriotsSchedule, getTeamNews, getStandings, getTeamPlayers, getBasicRoster } from '../lib/nflApi';
 import { processSchedule, getGameInfo } from '../lib/utils';
 import DashboardTabs from '../components/DashboardTabs';
 
 export default async function Home() {
-  const [scheduleRaw, newsRaw, standingsRaw, playersRaw] = await Promise.all([
+  // 1. Obtener datos
+  let [scheduleRaw, newsRaw, standingsRaw, playersRaw] = await Promise.all([
     getPatriotsSchedule(),
     getTeamNews(),
     getStandings(),
     getTeamPlayers()
   ]);
 
-  // Procesar Calendario
+  // PLAN B: Si la API principal falla (null), usamos la básica
+  if (!playersRaw) {
+      console.log("⚠️ Roster completo falló, usando básico...");
+      playersRaw = await getBasicRoster();
+  }
+
+  // 2. Procesar Calendario
   const { history, next, upcoming } = processSchedule(scheduleRaw);
   const historyFormatted = history.map(game => getGameInfo(game)).filter(Boolean);
   const nextGameFormatted = getGameInfo(next);
   const upcomingFormatted = upcoming.map(game => getGameInfo(game)).filter(Boolean);
 
-  // Procesar Noticias
+  // 3. Procesar Noticias
   let cleanNews = [];
   let rawList = [];
   if (Array.isArray(newsRaw)) rawList = newsRaw;
@@ -34,7 +41,7 @@ export default async function Home() {
      cleanNews = [{ title: "Check official site for latest updates", link: "https://www.patriots.com/news/", source: "System", pubDate: new Date().toISOString() }];
   }
 
-  // Procesar Récord
+  // 4. Procesar Récord
   let seasonRecord = "0-0";
   try {
      if (nextGameFormatted?.patriots?.record && nextGameFormatted.patriots.record !== "0-0") {
@@ -42,24 +49,20 @@ export default async function Home() {
      }
   } catch (e) { console.error(e); }
 
-  // 5. PROCESAR ROSTER (Lógica "Todoterreno")
+  // 5. PROCESAR ROSTER (Lógica Final)
   let finalRoster = [];
   if (playersRaw) {
-      // Caso 1: Array directo
-      if (Array.isArray(playersRaw)) {
+      // CASO CORRECTO DETECTADO EN LA CAPTURA: team -> athletes
+      if (playersRaw.team && playersRaw.team.athletes) {
+          finalRoster = playersRaw.team.athletes;
+      }
+      // Otros casos por seguridad
+      else if (Array.isArray(playersRaw)) {
           finalRoster = playersRaw;
-      } 
-      // Caso 2: Propiedad teamPlayers (Común en este endpoint)
-      else if (playersRaw.teamPlayers) {
+      } else if (playersRaw.teamPlayers) {
           finalRoster = playersRaw.teamPlayers;
-      }
-      // Caso 3: Propiedad data (Como en players/id)
-      else if (playersRaw.data) {
+      } else if (playersRaw.data) {
           finalRoster = playersRaw.data;
-      }
-      // Caso 4: Athletes (Estilo ESPN)
-      else if (playersRaw.athletes) {
-          finalRoster = playersRaw.athletes;
       }
   }
 
@@ -98,7 +101,7 @@ export default async function Home() {
               upcoming={upcomingFormatted}
               news={cleanNews}
               players={finalRoster}
-              debugData={playersRaw} // Mantenemos el debug por si acaso
+              // Ya no pasamos debugData para que se vea limpio si funciona
            />
       </div>
     </main>
