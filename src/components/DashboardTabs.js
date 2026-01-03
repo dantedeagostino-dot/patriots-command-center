@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import ScoreTrendChart from './ScoreTrendChart';
 
 // --- CONFIGURACIÓN ---
-const TEST_LIVE_MODE = true; // ✅ MODO SIMULACIÓN ACTIVADO
+const TEST_LIVE_MODE = true; 
 const POLLING_INTERVAL = 30000; 
 
 // --- MOCKS (Para simulación) ---
@@ -39,7 +39,6 @@ function Countdown({ targetDate }) {
 
 function PredictionWidget({ odds }) {
   if (!odds) return null;
-  // Aseguramos que sea un número
   const winPct = typeof odds.prediction?.pats === 'number' ? odds.prediction.pats : 50; 
   return (
     <div className="bg-slate-900/50 rounded-xl border border-slate-700 p-4 mb-4">
@@ -141,11 +140,99 @@ function NewsSection({ news }) {
   );
 }
 
-// --- COMPONENTE: LISTA DE JUGADORES ---
+// --- NUEVO COMPONENTE: MODAL DE ESTADÍSTICAS ---
+function PlayerModal({ player, onClose }) {
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (player?.id) {
+      setLoading(true);
+      fetch(`/api/player?id=${player.id}`)
+        .then(res => res.json())
+        .then(data => {
+          setStats(data);
+          setLoading(false);
+        })
+        .catch(() => setLoading(false));
+    }
+  }, [player]);
+
+  if (!player) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl relative">
+        
+        {/* Botón Cerrar */}
+        <button 
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-400 hover:text-white bg-black/50 p-2 rounded-full transition z-10"
+        >
+          ✕
+        </button>
+
+        {/* Cabecera del Jugador */}
+        <div className="relative h-32 bg-gradient-to-r from-blue-900 to-slate-900 flex items-end p-6">
+           <img 
+              src={player.headshot?.href || player.href || "https://static.www.nfl.com/image/private/f_auto,q_auto/league/nfl-placeholder"} 
+              className="absolute top-4 left-6 w-24 h-24 rounded-full border-4 border-slate-900 object-cover bg-slate-800 shadow-xl"
+              alt={player.displayName}
+           />
+           <div className="ml-28 mb-1">
+              <h2 className="text-2xl font-black text-white leading-none">{player.displayName}</h2>
+              <p className="text-blue-400 font-bold text-sm mt-1">
+                 #{player.jersey || "--"} • {player.position?.name || "Player"}
+              </p>
+           </div>
+        </div>
+
+        {/* Contenido de Estadísticas */}
+        <div className="p-6 pt-8 min-h-[200px]">
+           {loading ? (
+             <div className="flex flex-col items-center justify-center h-40 text-gray-500 gap-2">
+                <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                <p className="text-xs font-mono">Loading Stats...</p>
+             </div>
+           ) : stats ? (
+             <div className="space-y-4">
+                {/* Aquí renderizamos lo que devuelva la API de forma dinámica */}
+                {stats.items ? (
+                   <div className="grid grid-cols-2 gap-4">
+                      {stats.items.map((item, i) => (
+                         <div key={i} className="bg-slate-800 p-3 rounded border border-slate-700">
+                            <p className="text-[10px] text-gray-400 uppercase font-bold">{item.name || "Stat"}</p>
+                            <p className="text-xl font-bold text-white">{item.value || "--"}</p>
+                         </div>
+                      ))}
+                   </div>
+                ) : (
+                   <div className="text-center">
+                      <p className="text-gray-400 text-sm mb-4">Season Statistics</p>
+                      {/* Fallback inteligente: muestra la data cruda bonita si no tiene formato estándar */}
+                      <pre className="text-left text-[10px] bg-black/50 p-4 rounded border border-slate-800 overflow-auto max-h-60 text-green-400 font-mono">
+                        {JSON.stringify(stats, null, 2)}
+                      </pre>
+                   </div>
+                )}
+             </div>
+           ) : (
+             <div className="text-center text-gray-500 py-10">
+                <p>No statistics available for this player.</p>
+             </div>
+           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- COMPONENTE: LISTA DE JUGADORES ACTUALIZADA ---
 function RosterList({ players }) {
   const [search, setSearch] = useState("");
+  const [selectedPlayer, setSelectedPlayer] = useState(null); // Nuevo estado
   
-  if (!players || players.length === 0) return null; // El manejo de "vacío" lo hace el padre ahora
+  if (!players || players.length === 0) return null; 
 
   const filteredPlayers = players.filter(p => 
      (p.displayName && p.displayName.toLowerCase().includes(search.toLowerCase())) || 
@@ -154,7 +241,11 @@ function RosterList({ players }) {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-       {/* Barra de Búsqueda */}
+       {/* Modal (se muestra si hay un jugador seleccionado) */}
+       {selectedPlayer && (
+          <PlayerModal player={selectedPlayer} onClose={() => setSelectedPlayer(null)} />
+       )}
+
        <div className="mb-6 sticky top-0 bg-[#050B14] z-10 py-2">
           <input 
             type="text" 
@@ -165,10 +256,13 @@ function RosterList({ players }) {
           />
        </div>
 
-       {/* Grid de Jugadores */}
        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {filteredPlayers.map((player, i) => (
-             <div key={player.id || i} className="bg-slate-800 rounded-lg overflow-hidden border border-slate-700 hover:border-blue-500 transition group relative">
+             <button 
+                key={player.id || i} 
+                onClick={() => setSelectedPlayer(player)} // Al hacer clic, abrimos el modal
+                className="bg-slate-800 rounded-lg overflow-hidden border border-slate-700 hover:border-blue-500 hover:scale-[1.02] transition group relative text-left w-full focus:outline-none"
+             >
                 <div className="h-2 bg-gradient-to-r from-blue-900 to-red-900"></div>
                 <div className="p-4 flex flex-col items-center">
                    <div className="w-16 h-16 rounded-full bg-slate-700 mb-3 overflow-hidden border-2 border-slate-600 group-hover:border-blue-400 transition">
@@ -186,7 +280,7 @@ function RosterList({ players }) {
                       <span className="bg-slate-900 px-2 py-1 rounded">#{player.jersey || "--"}</span>
                    </div>
                 </div>
-             </div>
+             </button>
           ))}
        </div>
        {filteredPlayers.length === 0 && <p className="text-center text-gray-500 mt-10">No players found matching "{search}"</p>}
@@ -199,14 +293,6 @@ function RosterList({ players }) {
 export default function DashboardTabs({ history, nextGame, upcoming, news, players, debugData }) {
   const [activeTab, setActiveTab] = useState('next');
   
-  // --- DEBUGGER EN EL NAVEGADOR ---
-  useEffect(() => {
-    if (activeTab === 'roster') {
-      console.log("🕵️‍♂️ DATOS CRUDOS DE LA API (ROSTER):", debugData);
-      console.log("✅ JUGADORES PROCESADOS:", players);
-    }
-  }, [activeTab, debugData, players]);
-
   // ESTADOS
   const [livePlays, setLivePlays] = useState([]);
   const [liveStats, setLiveStats] = useState(null);
@@ -376,27 +462,6 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
           </div>
         )}
 
-        {activeTab === 'upcoming' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
-             {upcoming.length > 0 ? upcoming.map(game => (
-               <div key={game.id} className="bg-slate-800 p-4 rounded-lg border border-slate-700 flex items-center gap-4 hover:bg-slate-750 transition">
-                  <div className="text-center w-14 bg-slate-900 rounded p-2 border border-slate-800">
-                     <span className="block text-sm font-bold text-blue-400">{game.dateString.split(' ')[0]}</span>
-                     <span className="block text-[10px] text-gray-400 uppercase">{game.dateString.split(' ')[1]}</span>
-                  </div>
-                  <div className="flex-1">
-                     <div className="flex items-center gap-2 mb-1">
-                        <span className="text-gray-500 text-[10px] font-bold">VS</span>
-                        <span className="font-bold text-white">{String(game.opponent.name)}</span>
-                     </div>
-                     <p className="text-[10px] text-gray-500 uppercase tracking-wider">{game.venue}</p>
-                  </div>
-                  <img src={game.opponent.logo} className="w-10 h-10 object-contain opacity-80" alt="Logo" />
-               </div>
-             )) : <div className="text-center p-10 text-gray-500 col-span-2">No more games scheduled.</div>}
-          </div>
-        )}
-
         {/* --- PESTAÑA ROSTER MEJORADA --- */}
         {activeTab === 'roster' && (
            <div className="min-h-[200px]">
@@ -407,9 +472,6 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
                 /* Si NO hay jugadores, mostramos mensaje de error útil */
                 <div className="text-center p-10 bg-slate-900/50 rounded-xl border border-slate-800">
                    <p className="text-red-400 font-bold mb-2">No data found</p>
-                   <p className="text-gray-500 text-xs">
-                     Open your browser console (Right Click {'->'} Inspect {'->'} Console) to see the API response structure.
-                   </p>
                    <pre className="mt-4 text-[10px] text-left bg-black p-4 rounded overflow-auto max-h-60 text-green-400 font-mono">
                       {debugData ? JSON.stringify(debugData, null, 2) : "No data available"}
                    </pre>

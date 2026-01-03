@@ -14,6 +14,7 @@ const PATRIOTS_ID = '17';
 export async function fetchFromNFL(endpoint, params = '') {
   try {
     const url = `${BASE_URL}/${endpoint}${params ? `?${params}` : ''}`;
+    // Cache de 1 hora para datos estáticos
     const response = await fetch(url, { ...options, next: { revalidate: 3600 } });
     
     if (!response.ok) {
@@ -44,14 +45,17 @@ export async function getStandings() {
 }
 
 // 4. JUGADORES (ROSTER)
-// Intento 1: Pedir data completa (fotos, posición). Nota: teamid en MINÚSCULAS según doc.
 export async function getTeamPlayers() {
   return await fetchFromNFL('nflteamplayers', `teamid=${PATRIOTS_ID}`);
 }
 
-// Intento 2: Pedir data básica (solo nombres) - Respaldo
 export async function getBasicRoster() {
   return await fetchFromNFL('players/id', `teamId=${PATRIOTS_ID}`);
+}
+
+// 5. ESTADÍSTICAS DE JUGADOR (NUEVO)
+export async function getPlayerStats(playerId) {
+  return await fetchFromNFL('nfl-player-statistic', `playerId=${playerId}`);
 }
 
 // --- MODO EN VIVO ---
