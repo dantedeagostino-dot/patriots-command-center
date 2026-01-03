@@ -276,7 +276,17 @@ function StandingsWidget({ standings }) {
 }
 
 function InjuryReportWidget({ injuries }) {
-  const list = injuries?.injuries || injuries || [];
+  // 🛡️ CORRECCIÓN DE SEGURIDAD:
+  // Verificamos estrictamente que sea un array. Si es un objeto de error u otra cosa, usamos [].
+  let list = [];
+  
+  if (injuries?.injuries && Array.isArray(injuries.injuries)) {
+      list = injuries.injuries;
+  } else if (Array.isArray(injuries)) {
+      list = injuries;
+  }
+
+  // Si la lista está vacía, no renderizamos nada.
   if (list.length === 0) return null;
 
   return (
@@ -318,7 +328,16 @@ function InjuryReportWidget({ injuries }) {
 }
 
 function SeasonLeadersWidget({ leaders }) {
-  const categories = leaders?.leaders || leaders || [];
+  // 🛡️ CORRECCIÓN DE SEGURIDAD:
+  // Aseguramos que 'categories' sea siempre un array válido.
+  let categories = [];
+  
+  if (leaders?.leaders && Array.isArray(leaders.leaders)) {
+      categories = leaders.leaders;
+  } else if (Array.isArray(leaders)) {
+      categories = leaders;
+  }
+
   if (categories.length === 0) return null;
 
   return (
@@ -353,7 +372,6 @@ function SeasonLeadersWidget({ leaders }) {
     </div>
   );
 }
-
 function PlayerModal({ player, onClose }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
