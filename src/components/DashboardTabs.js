@@ -4,14 +4,37 @@ import { useState, useEffect } from 'react';
 import ScoreTrendChart from './ScoreTrendChart';
 
 // --- CONFIGURACIÓN ---
-const TEST_LIVE_MODE = false; 
+const TEST_LIVE_MODE = true; // ⚠️ EN TRUE PARA PRUEBAS (Poner en false el día del partido)
 const POLLING_INTERVAL = 15000; 
 
-// --- MOCKS (Respaldo) ---
-const MOCK_PLAYS = [];
-const MOCK_STATS = { passing: { name: "-", stat: "-" }, rushing: { name: "-", stat: "-" }, receiving: { name: "-", stat: "-" } };
-const MOCK_ODDS = { spread: "-", overUnder: "-", moneyline: "-" };
-const MOCK_CHART_DATA = [];
+// --- MOCKS CON DATOS (Para ver la simulación completa) ---
+const MOCK_PLAYS = [
+    { time: "Q4 01:58", text: "Drake Maye pass deep right to Douglas for 25 yards TOUCHDOWN." },
+    { time: "Q4 02:05", text: "Stevenson rush up the middle for 4 yards." },
+    { time: "Q4 02:45", text: "Maye pass short left to Henry for 12 yards, 1st Down." },
+    { time: "Q4 03:10", text: "Gibson rush right tackle for -2 yards." },
+    { time: "Q4 03:50", text: "Tua Tagovailoa pass incomplete deep left intended for Hill." },
+];
+
+const MOCK_STATS = { 
+    passing: { name: "D. Maye", stat: "245 YDS, 2 TD" }, 
+    rushing: { name: "R. Stevenson", stat: "89 YDS, 1 TD" }, 
+    receiving: { name: "D. Douglas", stat: "6 REC, 85 YDS" } 
+};
+
+const MOCK_ODDS = { spread: "-3.5", overUnder: "48.5", moneyline: "-180" };
+
+// Datos para que el gráfico NO esté vacío
+const MOCK_CHART_DATA = [
+    { time: '1', pats: 0, opp: 0 },
+    { time: '2', pats: 7, opp: 3 },
+    { time: '3', pats: 7, opp: 10 },
+    { time: '4', pats: 14, opp: 10 },
+    { time: '5', pats: 14, opp: 17 },
+    { time: '6', pats: 21, opp: 17 },
+    { time: '7', pats: 24, opp: 24 },
+    { time: '8', pats: 27, opp: 24 }
+];
 
 // --- COMPONENTES AUXILIARES ---
 
@@ -73,19 +96,68 @@ function BettingWidget({ odds }) {
   );
 }
 
+// --- GRÁFICO DE POSICIÓN DE CAMPO (FIELD TRACKER) ---
+function FieldTrackerWidget({ game }) {
+  const yardLine = game.yardLine || 50; 
+  const possessionTeam = game.possessionTeam || 'home'; 
+  const down = game.down || 1;
+  const distance = game.distance || 10;
+  
+  const positionPct = yardLine; 
+
+  return (
+    <div className="bg-slate-900/80 rounded-xl border border-slate-700 p-4 mb-6 relative overflow-hidden">
+       <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:16px_16px]"></div>
+
+       <div className="flex justify-between items-center mb-4 relative z-10">
+          <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+            <span className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></span> Field Radar
+          </h3>
+          <div className="bg-slate-800 px-3 py-1 rounded border border-slate-600">
+             <span className="text-xs font-mono text-blue-400 font-black">
+                {down}{['st','nd','rd','th'][down-1] || 'th'} & {distance}
+             </span>
+          </div>
+       </div>
+       
+       <div className="relative h-14 bg-gradient-to-r from-slate-800 via-slate-800/80 to-slate-800 border-x-4 border-slate-600 rounded flex items-center overflow-hidden shadow-inner">
+          {[10, 20, 30, 40, 50, 60, 70, 80, 90].map(line => (
+             <div key={line} className={`absolute h-full w-[1px] ${line === 50 ? 'bg-yellow-500/30 w-[2px]' : 'bg-slate-600/30'}`} style={{ left: `${line}%` }}></div>
+          ))}
+          <div className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-black text-red-500/20 -rotate-90">OPP</div>
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-black text-blue-500/20 rotate-90">NE</div>
+
+          <div 
+            className="absolute h-5 w-5 bg-gradient-to-br from-yellow-300 to-yellow-600 rounded-full border-2 border-slate-900 shadow-[0_0_15px_rgba(250,204,21,0.6)] z-10 transition-all duration-1000 ease-in-out flex items-center justify-center"
+            style={{ left: `${positionPct}%`, transform: 'translateX(-50%)' }}
+          >
+             <span className={`text-[8px] text-black font-bold ${possessionTeam === 'home' ? 'rotate-0' : 'rotate-180'}`}>➤</span>
+          </div>
+          <div className="absolute h-full w-[2px] bg-yellow-400/50 z-0 transition-all duration-1000" style={{ left: `${Math.min(positionPct + (possessionTeam === 'home' ? 10 : -10), 98)}%` }}></div>
+       </div>
+       
+       <div className="flex justify-between text-[9px] text-gray-500 font-mono mt-1 px-1 uppercase tracking-wider">
+          <span>Own Endzone</span>
+          <span>50 Yard Line</span>
+          <span>Opp Endzone</span>
+       </div>
+    </div>
+  );
+}
+
 function PlayByPlayWidget({ plays }) {
   return (
-    <div className="bg-slate-900/50 rounded-xl border border-slate-700 overflow-hidden flex flex-col h-64">
+    <div className="bg-slate-900/50 rounded-xl border border-slate-700 overflow-hidden flex flex-col h-72">
       <div className="bg-slate-800 p-3 border-b border-slate-700 flex justify-between items-center">
         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Play-by-Play</h3>
         <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
       </div>
-      <div className="overflow-y-auto p-4 space-y-3 custom-scrollbar flex flex-col-reverse">
-         {(!plays || plays.length === 0) && <p className="text-gray-500 text-xs text-center">Waiting for game start...</p>}
+      <div className="overflow-y-auto p-4 space-y-3 custom-scrollbar flex flex-col">
+         {(!plays || plays.length === 0) && <p className="text-gray-500 text-xs text-center mt-10">Waiting for game start...</p>}
          {plays && plays.map((play, i) => (
-           <div key={i} className="flex gap-3 text-sm border-b border-slate-800 pb-2 last:border-0">
-              <span className="font-mono text-blue-400 text-xs whitespace-nowrap">{play.clock?.displayValue || play.time}</span>
-              <p className="text-gray-300 text-xs">{String(play.text)}</p>
+           <div key={i} className="flex gap-3 text-sm border-b border-slate-800 pb-2 last:border-0 last:pb-0 animate-in fade-in slide-in-from-left-2">
+              <span className="font-mono text-blue-400 text-xs whitespace-nowrap pt-0.5">{play.clock?.displayValue || play.time}</span>
+              <p className="text-gray-300 text-xs leading-relaxed">{String(play.text)}</p>
            </div>
          ))}
       </div>
@@ -94,22 +166,22 @@ function PlayByPlayWidget({ plays }) {
 }
 
 function TopPerformersWidget({ stats }) {
-  if (!stats) return <div className="h-64 flex items-center justify-center text-gray-500 text-xs">Loading Stats...</div>;
+  if (!stats) return <div className="h-72 bg-slate-900/50 rounded-xl border border-slate-700 flex items-center justify-center text-gray-500 text-xs">Loading Stats...</div>;
   return (
-    <div className="bg-slate-900/50 rounded-xl border border-slate-700 p-4 h-64 flex flex-col justify-between">
-       <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Top Performers</h3>
+    <div className="bg-slate-900/50 rounded-xl border border-slate-700 p-4 h-72 flex flex-col justify-between">
+       <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Top Performers</h3>
        {['Passing', 'Rushing', 'Receiving'].map(type => {
           const key = type.toLowerCase();
           const data = stats[key] || { name: '-', stat: '-' };
           const icon = type === 'Passing' ? '🏈' : type === 'Rushing' ? '🏃' : '👐';
           const color = type === 'Passing' ? 'text-blue-400' : type === 'Rushing' ? 'text-green-400' : 'text-purple-400';
           return (
-             <div key={key} className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-sm">{icon}</div>
+             <div key={key} className="flex items-center gap-4 bg-slate-800/40 p-2 rounded-lg border border-slate-700/50">
+                <div className="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center text-sm shadow-sm border border-slate-700">{icon}</div>
                 <div>
-                   <p className="text-[10px] text-gray-500 uppercase">{type}</p>
-                   <p className="font-bold text-sm text-white">{String(data.name)}</p>
-                   <p className={`text-xs ${color}`}>{String(data.stat)}</p>
+                   <p className="text-[9px] text-gray-500 uppercase tracking-wider font-bold">{type}</p>
+                   <p className="font-bold text-sm text-white leading-tight">{String(data.name)}</p>
+                   <p className={`text-xs ${color} font-mono`}>{String(data.stat)}</p>
                 </div>
              </div>
           );
@@ -161,7 +233,7 @@ function StandingsWidget({ standings }) {
   if (divisionData.length === 0) return null;
 
   return (
-    <div className="bg-slate-900/80 rounded-xl border border-slate-700 overflow-hidden mb-6 shadow-lg">
+    <div className="bg-slate-900/80 rounded-xl border border-slate-700 overflow-hidden mb-6 shadow-lg mt-6">
        <div className="bg-slate-950/50 p-3 border-b border-slate-800 flex justify-between items-center">
           <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
              <span>🏆</span> AFC EAST STANDINGS
@@ -383,7 +455,6 @@ function PlayerModal({ player, onClose }) {
 function GameStatsModal({ game, stats, onClose }) {
   if (!game) return null;
 
-  // Intentar parsear el Box Score para obtener estadísticas de equipo
   let teamStats = [];
   if (stats && stats.boxScore && stats.boxScore.teams) {
       teamStats = stats.boxScore.teams.map(team => {
@@ -409,7 +480,6 @@ function GameStatsModal({ game, stats, onClose }) {
       <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl relative max-h-[90vh] overflow-y-auto">
         <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white bg-black/50 p-2 rounded-full transition z-10">✕</button>
         
-        {/* Cabecera del Partido */}
         <div className="bg-gradient-to-b from-slate-800 to-slate-900 p-6 text-center border-b border-slate-700">
             <div className="text-gray-400 text-xs uppercase tracking-widest mb-4 font-bold">{game.dateString} • {game.venue}</div>
             <div className="flex justify-center items-center gap-8 md:gap-12">
@@ -425,7 +495,6 @@ function GameStatsModal({ game, stats, onClose }) {
             </div>
         </div>
 
-        {/* Tabla Comparativa */}
         <div className="p-6">
             <h3 className="text-center text-blue-400 text-xs font-bold uppercase tracking-[0.2em] mb-4">Official Game Stats</h3>
             
@@ -519,7 +588,8 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
   const displayGame = TEST_LIVE_MODE && nextGame ? {
       ...nextGame, isLive: true, status: "Q4 - 01:58",
       patriots: { ...nextGame.patriots, score: "27", name: String(nextGame.patriots.name || "Patriots") },
-      opponent: { ...nextGame.opponent, score: "24", name: String(nextGame.opponent.name || "Opponent") }
+      opponent: { ...nextGame.opponent, score: "24", name: String(nextGame.opponent.name || "Opponent") },
+      yardLine: 68, possessionTeam: 'home', down: 2, distance: 5
   } : nextGame;
 
   // Cargar datos en vivo
@@ -551,7 +621,6 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
       setSelectedHistoryGame(game);
       setHistoryGameStats(null); // Resetear stats anteriores
       try {
-          // Reutilizamos la API de Live porque también trae boxscores de juegos pasados
           const res = await fetch(`/api/live?id=${game.id}`);
           if (res.ok) {
               const data = await res.json();
@@ -591,26 +660,18 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
                     onClick={() => handleHistoryClick(game)}
                     className="w-full flex items-center justify-between bg-slate-800 p-4 rounded-lg border border-slate-700 hover:bg-slate-700 hover:border-blue-500 transition group text-left"
                  >
-                    {/* Fecha y Estado */}
                     <div className="flex flex-col w-20">
                         <span className="text-gray-400 text-xs font-bold">{game.dateString}</span>
                         <span className={`text-[10px] uppercase font-bold mt-1 ${parseInt(game.patriots.score) > parseInt(game.opponent.score) ? 'text-green-400' : 'text-red-400'}`}>{game.status}</span>
                     </div>
-
-                    {/* Logos, Nombres y Score - Diseño Refinado */}
                     <div className="flex items-center justify-center gap-3 flex-1 mx-2">
-                        {/* Oponente */}
                         <div className="flex items-center gap-2 justify-end min-w-[80px] md:min-w-[120px]">
                             <span className="text-gray-400 text-[10px] md:text-xs font-bold uppercase hidden md:block truncate">{game.opponent.name}</span>
                             <img src={game.opponent.logo} className="w-8 h-8 object-contain" alt="Opp" />
                         </div>
-
-                        {/* Score */}
                         <div className="font-mono font-black text-white text-sm bg-slate-950/50 px-2 py-1 rounded whitespace-nowrap border border-slate-700/50">
                             {game.opponent.score} - {game.patriots.score}
                         </div>
-
-                        {/* Patriots */}
                         <div className="flex items-center gap-2 justify-start min-w-[80px] md:min-w-[120px]">
                             <img src={game.patriots.logo} className="w-8 h-8 object-contain" alt="Pats" />
                             <span className="text-blue-400 text-[10px] md:text-xs font-bold uppercase hidden md:block truncate">{game.patriots.name}</span>
@@ -656,10 +717,23 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
                   </div>
 
                   {displayGame.isLive ? (
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div className="bg-slate-900/80 rounded-xl p-4 border border-slate-700 h-64"><p className="text-blue-400 text-xs font-bold uppercase tracking-widest mb-4">Score Trend</p><ScoreTrendChart data={chartData} /></div>
-                        <PlayByPlayWidget plays={livePlays} />
-                        <TopPerformersWidget stats={liveStats} />
+                    <div className="space-y-6">
+                        <FieldTrackerWidget game={displayGame} />
+
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            {/* --- AQUÍ ESTÁ EL FIX DEL GRÁFICO --- */}
+                            <div className="bg-slate-900/80 rounded-xl p-4 border border-slate-700 h-72 flex flex-col">
+                               <p className="text-blue-400 text-xs font-bold uppercase tracking-widest mb-4 flex-none">Score Trend</p>
+                               <div className="flex-1 min-h-0 w-full">
+                                  <ScoreTrendChart data={chartData} />
+                               </div>
+                            </div>
+                            
+                            <PlayByPlayWidget plays={livePlays} />
+                            <TopPerformersWidget stats={liveStats} />
+                        </div>
+                        
+                        <StandingsWidget standings={standings} />
                     </div>
                   ) : (
                     <div className="space-y-6">
