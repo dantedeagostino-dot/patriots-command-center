@@ -14,7 +14,6 @@ const PATRIOTS_ID = '17';
 export async function fetchFromNFL(endpoint, params = '') {
   try {
     const url = `${BASE_URL}/${endpoint}${params ? `?${params}` : ''}`;
-    // Aumentamos cache a 1 hora (3600s) para el roster ya que cambia poco
     const response = await fetch(url, { ...options, next: { revalidate: 3600 } });
     
     if (!response.ok) {
@@ -44,10 +43,15 @@ export async function getStandings() {
   return await fetchFromNFL('nflstandings', 'year=2024');
 }
 
-// 4. JUGADORES (ROSTER COMPLETO)
-// Intentamos con el endpoint rico usando teamId (CamelCase)
+// 4. JUGADORES (ROSTER)
+// Intento 1: Pedir data completa (fotos, posición). Nota: teamid en MINÚSCULAS según doc.
 export async function getTeamPlayers() {
-  return await fetchFromNFL('nflteamplayers', `teamId=${PATRIOTS_ID}`);
+  return await fetchFromNFL('nflteamplayers', `teamid=${PATRIOTS_ID}`);
+}
+
+// Intento 2: Pedir data básica (solo nombres) - Respaldo
+export async function getBasicRoster() {
+  return await fetchFromNFL('players/id', `teamId=${PATRIOTS_ID}`);
 }
 
 // --- MODO EN VIVO ---
