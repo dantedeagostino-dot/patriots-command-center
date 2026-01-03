@@ -7,16 +7,11 @@ import ScoreTrendChart from './ScoreTrendChart';
 const TEST_LIVE_MODE = false; 
 const POLLING_INTERVAL = 15000; 
 
-// --- MOCKS (Para simulación) ---
-const MOCK_PLAYS = [
-  { id: 1, time: "Q4 01:58", text: "Two-Minute Warning.", type: "system" },
-  { id: 2, time: "Q4 02:05", text: "D.Maye pass short right to D.Douglas to NE 45 for 8 yards.", type: "play" },
-  { id: 3, time: "Q4 02:45", text: "R.Stevenson right tackle to NE 37 for 4 yards.", type: "play" },
-  { id: 4, time: "Q4 03:10", text: "SCORING DRIVE: 8 plays, 75 yards, 04:20.", type: "score" }
-];
-const MOCK_STATS = { passing: { name: "D. Maye", stat: "245 Yds", sub: "2 TD" }, rushing: { name: "R. Stevenson", stat: "89 Yds", sub: "18 Car" }, receiving: { name: "D. Douglas", stat: "76 Yds", sub: "6 Rec" } };
-const MOCK_ODDS = { spread: "-3.5 Pats", overUnder: "44.5", moneyline: "-180", prediction: { pats: 65, opp: 35 } };
-const MOCK_CHART_DATA = [{ time: 'Q1', pats: 0, opp: 0 }, { time: 'Q2', pats: 10, opp: 7 }, { time: 'Q3', pats: 17, opp: 17 }, { time: 'Q4', pats: 27, opp: 24 }];
+// --- MOCKS (Para simulación en caso de error) ---
+const MOCK_PLAYS = [];
+const MOCK_STATS = { passing: { name: "-", stat: "-" }, rushing: { name: "-", stat: "-" }, receiving: { name: "-", stat: "-" } };
+const MOCK_ODDS = { spread: "-", overUnder: "-", moneyline: "-" };
+const MOCK_CHART_DATA = [];
 
 // --- COMPONENTES AUXILIARES ---
 
@@ -140,7 +135,7 @@ function NewsSection({ news }) {
   );
 }
 
-// --- MODAL DE ESTADÍSTICAS (Versión Final con Diseño) ---
+// --- MODAL DE ESTADÍSTICAS (DISEÑO FINAL) ---
 function PlayerModal({ player, onClose }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -174,20 +169,17 @@ function PlayerModal({ player, onClose }) {
 
   if (!player) return null;
 
-  // Lógica para extraer datos de "player_overview"
+  // Lógica para extraer datos
   let displayStats = [];
-  let seasonTitle = "Season Stats";
+  let seasonTitle = "Current Season Stats";
 
   if (stats && stats.player_overview && stats.player_overview.statistics) {
       const apiStats = stats.player_overview.statistics;
-      seasonTitle = apiStats.displayName || seasonTitle;
+      if(apiStats.displayName) seasonTitle = apiStats.displayName;
       
-      // Obtenemos las etiquetas (Labels) ej: "TOT", "SOLO", "SACK"
       const labels = apiStats.labels || [];
-      // Obtenemos los valores del último split (la temporada actual)
       const values = apiStats.splits?.[0]?.stats || [];
 
-      // Unimos etiquetas con valores
       if (labels.length > 0 && values.length > 0) {
           displayStats = labels.map((label, index) => ({
               name: label,
@@ -200,7 +192,6 @@ function PlayerModal({ player, onClose }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl relative max-h-[90vh] overflow-y-auto">
         
-        {/* Botón Cerrar */}
         <button 
           onClick={onClose}
           className="absolute top-4 right-4 text-gray-400 hover:text-white bg-black/50 p-2 rounded-full transition z-10"
@@ -208,7 +199,6 @@ function PlayerModal({ player, onClose }) {
           ✕
         </button>
 
-        {/* Cabecera del Jugador */}
         <div className="relative h-32 bg-gradient-to-r from-blue-900 to-slate-900 flex items-end p-6">
            <img 
               src={player.headshot?.href || player.href || "https://static.www.nfl.com/image/private/f_auto,q_auto/league/nfl-placeholder"} 
@@ -223,7 +213,6 @@ function PlayerModal({ player, onClose }) {
            </div>
         </div>
 
-        {/* Contenido de Estadísticas */}
         <div className="p-6 pt-8 min-h-[200px]">
            {loading ? (
              <div className="flex flex-col items-center justify-center h-40 text-gray-500 gap-2">
@@ -243,17 +232,14 @@ function PlayerModal({ player, onClose }) {
                 </div>
              </div>
            ) : (
-             <div className="text-center">
-                {/* Fallback si no hay formato conocido, mostramos el JSON crudo pero más pequeño */}
-                <p className="text-gray-500 text-sm mb-4">Detailed stats not available.</p>
-                {stats && (
-                    <details className="text-left">
-                        <summary className="text-[10px] text-gray-600 cursor-pointer hover:text-gray-400">View Raw Data</summary>
-                        <pre className="mt-2 text-[8px] bg-black p-2 rounded text-green-500 overflow-auto max-h-40">
-                            {JSON.stringify(stats, null, 2)}
-                        </pre>
-                    </details>
-                )}
+             <div className="flex flex-col items-center justify-center h-40 text-center space-y-3 bg-slate-800/20 rounded-xl p-6 border border-slate-700/30">
+                <div className="text-4xl">🛡️</div>
+                <div>
+                    <p className="text-white font-bold text-lg">No Stats Recorded</p>
+                    <p className="text-gray-500 text-xs mt-1 max-w-xs mx-auto">
+                        This player (typically Offensive Line or Special Teams) does not have standard statistical data for this season.
+                    </p>
+                </div>
              </div>
            )}
         </div>
@@ -293,7 +279,6 @@ function RosterList({ players }) {
        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {filteredPlayers.map((player, i) => (
              <button 
-                // ✅ CORRECCIÓN AQUÍ TAMBIÉN: Usar playerId si id falla
                 key={player.id || player.playerId || i} 
                 onClick={() => setSelectedPlayer(player)} 
                 className="bg-slate-800 rounded-lg overflow-hidden border border-slate-700 hover:border-blue-500 hover:scale-[1.02] transition group relative text-left w-full focus:outline-none"
@@ -455,7 +440,7 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
                           
                           {displayGame.isLive ? (
                             <div className="flex flex-col items-center">
-                               <div className="text-5xl md:text-7xl font-mono font-black text-white tracking-tighter">
+                                <div className="text-5xl md:text-7xl font-mono font-black text-white tracking-tighter">
                                   {displayGame.patriots.score}<span className="text-gray-600 mx-2">-</span>{displayGame.opponent.score}
                                </div>
                                <span className="text-red-400 font-bold mt-2 animate-pulse font-mono text-lg">{displayGame.status}</span>
@@ -497,14 +482,58 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
           </div>
         )}
 
-        {/* --- PESTAÑA ROSTER MEJORADA --- */}
+        {/* --- PESTAÑA UPCOMING AÑADIDA CON EFECTO VISUAL --- */}
+        {activeTab === 'upcoming' && (
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 relative">
+             {/* TITULAR 2026 CON EFECTO DE SCAN */}
+             <div className="text-center mb-8 relative p-6 bg-slate-900/40 rounded-2xl border border-slate-800 overflow-hidden group">
+                
+                {/* Luz de escáner animada */}
+                <div className="absolute top-0 left-[-100%] w-full h-full bg-gradient-to-r from-transparent via-blue-500/10 to-transparent skew-x-12 animate-[shimmer_3s_infinite]"></div>
+
+                <h3 className="text-3xl font-black text-white italic tracking-tighter drop-shadow-lg">
+                  <span className="text-blue-500">2026</span> SEASON
+                </h3>
+                <p className="text-gray-400 text-[10px] font-bold tracking-[0.3em] uppercase mt-2">
+                  CLASSIFIED: UPCOMING SCHEDULE
+                </p>
+             </div>
+
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+               {upcoming && upcoming.length > 0 ? upcoming.map(game => (
+                 <div key={game.id} className="bg-slate-800 p-4 rounded-lg border border-slate-700 flex items-center gap-4 hover:bg-slate-750 transition hover:border-blue-500/50">
+                    <div className="text-center w-14 bg-slate-900 rounded p-2 border border-slate-800">
+                       <span className="block text-sm font-bold text-blue-400">{game.dateString.split(' ')[0]}</span>
+                       <span className="block text-[10px] text-gray-400 uppercase">{game.dateString.split(' ')[1]}</span>
+                    </div>
+                    <div className="flex-1">
+                       <div className="flex items-center gap-2 mb-1">
+                          <span className="text-gray-500 text-[10px] font-bold">VS</span>
+                          <span className="font-bold text-white">{String(game.opponent.name)}</span>
+                       </div>
+                       <p className="text-[10px] text-gray-500 uppercase tracking-wider">{game.venue}</p>
+                    </div>
+                    <img src={game.opponent.logo} className="w-10 h-10 object-contain opacity-80" alt="Logo" />
+                 </div>
+               )) : (
+                 <div className="col-span-2 text-center py-12 bg-slate-900/50 rounded-xl border border-dashed border-slate-700">
+                    <div className="inline-block p-3 rounded-full bg-slate-800 mb-3">
+                      <span className="text-2xl">📡</span>
+                    </div>
+                    <p className="text-gray-300 font-bold text-sm">No upcoming games detected.</p>
+                    <p className="text-gray-500 text-xs mt-1">System is scanning for 2026 schedule updates...</p>
+                 </div>
+               )}
+             </div>
+          </div>
+        )}
+
+        {/* --- PESTAÑA ROSTER --- */}
         {activeTab === 'roster' && (
            <div className="min-h-[200px]">
-             {/* Si hay jugadores, mostramos la lista */}
              {players && players.length > 0 ? (
                 <RosterList players={players} />
              ) : (
-                /* Si NO hay jugadores, mostramos mensaje de error útil */
                 <div className="text-center p-10 bg-slate-900/50 rounded-xl border border-slate-800">
                    <p className="text-red-400 font-bold mb-2">No data found</p>
                    <pre className="mt-4 text-[10px] text-left bg-black p-4 rounded overflow-auto max-h-60 text-green-400 font-mono">
