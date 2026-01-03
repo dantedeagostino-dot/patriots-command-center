@@ -4,27 +4,35 @@ import {
   getStandings, 
   getTeamPlayers, 
   getBasicRoster,
-  getTeamLeaders,
-  getTeamInjuries
+  getTeamLeaders,  // <--- Importante para los nuevos widgets
+  getTeamInjuries  // <--- Importante para los nuevos widgets
 } from '../lib/nflApi';
 import { processSchedule, getGameInfo } from '../lib/utils';
 import DashboardTabs from '../components/DashboardTabs';
 
 export default async function Home() {
-  // 1. Obtener TODOS los datos
-  let [scheduleRaw, newsRaw, standingsRaw, playersRaw, leadersRaw, injuriesRaw] = await Promise.all([
-    getPatriotsSchedule(),
-    getTeamNews(),
-    getStandings(),
-    getTeamPlayers(),
-    getTeamLeaders(),
-    getTeamInjuries()
-  ]);
+  // 1. Obtener TODOS los datos (incluyendo líderes y lesiones)
+  // Usamos un try/catch global para que un fallo en la API no rompa toda la página
+  let scheduleRaw, newsRaw, standingsRaw, playersRaw, leadersRaw, injuriesRaw;
+  
+  try {
+    [scheduleRaw, newsRaw, standingsRaw, playersRaw, leadersRaw, injuriesRaw] = await Promise.all([
+      getPatriotsSchedule(),
+      getTeamNews(),
+      getStandings(),
+      getTeamPlayers(),
+      getTeamLeaders(),
+      getTeamInjuries()
+    ]);
+  } catch (error) {
+    console.error("Error fetching data:", error);
+  }
 
-  // PLAN B: Roster
+  // PLAN B: Si el roster falla, intentamos el básico
   if (!playersRaw) {
-      console.log("⚠️ Roster completo falló, usando básico...");
-      playersRaw = await getBasicRoster();
+      try {
+        playersRaw = await getBasicRoster();
+      } catch (e) { console.error("Roster fallback failed", e); }
   }
 
   // 2. Procesar Calendario
@@ -33,11 +41,11 @@ export default async function Home() {
   const nextGameFormatted = getGameInfo(next);
   const upcomingFormatted = upcoming.map(game => getGameInfo(game)).filter(Boolean);
 
-  // 3. Procesar Noticias (CORRECCIÓN ANTI-ERROR)
+  // 3. Procesar Noticias (BLINDADO CONTRA ERRORES)
   let cleanNews = [];
   let rawList = [];
   
-  // Validamos estrictamente que sean arrays antes de asignarlos
+  // Validamos estrictamente que la respuesta sea un array antes de usarla
   if (Array.isArray(newsRaw)) {
       rawList = newsRaw;
   } else if (newsRaw?.data && Array.isArray(newsRaw.data)) {
@@ -46,7 +54,7 @@ export default async function Home() {
       rawList = newsRaw.articles;
   }
 
-  // Solo hacemos map si rawList es realmente un array y tiene datos
+  // Solo hacemos .map si realmente es un array con datos
   if (Array.isArray(rawList) && rawList.length > 0) {
       cleanNews = rawList.map(item => ({
          title: item.headline || item.title || "Patriots News",
@@ -56,7 +64,7 @@ export default async function Home() {
       }));
   }
 
-  // Fallback si no hay noticias o hubo error
+  // Fallback si no hay noticias
   if (cleanNews.length === 0) {
      cleanNews = [{ title: "Check official site for latest updates", link: "https://www.patriots.com/news/", source: "System", pubDate: new Date().toISOString() }];
   }
@@ -118,8 +126,8 @@ export default async function Home() {
               upcoming={upcomingFormatted}
               news={cleanNews}
               players={finalRoster}
-              leaders={leadersRaw}
-              injuries={injuriesRaw}
+              leaders={leadersRaw}   // <--- Se lo pasamos al componente
+              injuries={injuriesRaw} // <--- Se lo pasamos al componente
            />
       </div>
     </main>
