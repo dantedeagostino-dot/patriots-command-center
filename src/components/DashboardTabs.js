@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import ScoreTrendChart from './ScoreTrendChart';
+import SeasonPerformanceChart from './SeasonPerformanceChart'; // <--- NUEVO IMPORT
 
 // --- CONFIGURACIÓN ---
 const TEST_LIVE_MODE = true; // ⚠️ EN TRUE PARA PRUEBAS (Poner en false el día del partido)
@@ -584,6 +585,21 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
   const [selectedHistoryGame, setSelectedHistoryGame] = useState(null);
   const [historyGameStats, setHistoryGameStats] = useState(null);
 
+  // 1. PROCESAR DATOS PARA EL GRÁFICO DE TEMPORADA (NUEVO)
+  const seasonChartData = history ? [...history].reverse().map(game => {
+      const patsScore = parseInt(game.patriots.score) || 0;
+      const oppScore = parseInt(game.opponent.score) || 0;
+      const diff = patsScore - oppScore;
+      
+      return {
+          date: game.dateString,
+          opponent: game.opponent.name,
+          oppCode: game.opponent.name.substring(0, 3).toUpperCase(), // Abreviatura
+          diff: diff,
+          score: `${patsScore}-${oppScore}`
+      };
+  }) : [];
+
   // Simulador
   const displayGame = TEST_LIVE_MODE && nextGame ? {
       ...nextGame, isLive: true, status: "Q4 - 01:58",
@@ -652,6 +668,9 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
       <div className="min-h-[400px]">
         {activeTab === 'history' && (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+            {/* 2. AQUÍ SE INSERTA EL GRÁFICO NUEVO */}
+            <SeasonPerformanceChart data={seasonChartData} />
+
             <NewsSection news={news} />
             <div className="space-y-3">
               {history.length > 0 ? history.map(game => (
@@ -684,6 +703,7 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
           </div>
         )}
 
+        {/* RESTO DE LOS TABS IGUALES */}
         {activeTab === 'next' && (
           <div className="animate-in fade-in zoom-in duration-500">
              {displayGame ? (
@@ -721,14 +741,12 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
                         <FieldTrackerWidget game={displayGame} />
 
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                            {/* --- AQUÍ ESTÁ EL FIX DEL GRÁFICO --- */}
                             <div className="bg-slate-900/80 rounded-xl p-4 border border-slate-700 h-72 flex flex-col">
                                <p className="text-blue-400 text-xs font-bold uppercase tracking-widest mb-4 flex-none">Score Trend</p>
                                <div className="flex-1 min-h-0 w-full">
                                   <ScoreTrendChart data={chartData} />
                                </div>
                             </div>
-                            
                             <PlayByPlayWidget plays={livePlays} />
                             <TopPerformersWidget stats={liveStats} />
                         </div>
