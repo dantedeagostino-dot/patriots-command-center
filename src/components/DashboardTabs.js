@@ -4,10 +4,10 @@ import { useState, useEffect } from 'react';
 import ScoreTrendChart from './ScoreTrendChart';
 
 // --- CONFIGURACIÓN ---
-const TEST_LIVE_MODE = false; 
+const TEST_LIVE_MODE = true; 
 const POLLING_INTERVAL = 15000; 
 
-// --- MOCKS (Para simulación en caso de error) ---
+// --- MOCKS (Respaldo) ---
 const MOCK_PLAYS = [];
 const MOCK_STATS = { passing: { name: "-", stat: "-" }, rushing: { name: "-", stat: "-" }, receiving: { name: "-", stat: "-" } };
 const MOCK_ODDS = { spread: "-", overUnder: "-", moneyline: "-" };
@@ -135,7 +135,88 @@ function NewsSection({ news }) {
   );
 }
 
-// --- MODAL DE ESTADÍSTICAS (DISEÑO FINAL) ---
+// --- NUEVOS WIDGETS TÁCTICOS ---
+
+function InjuryReportWidget({ injuries }) {
+  const list = injuries?.injuries || injuries || [];
+  if (list.length === 0) return null;
+
+  return (
+    <div className="bg-slate-900/80 rounded-xl border border-red-900/30 overflow-hidden h-full">
+       <div className="bg-red-950/20 p-3 border-b border-red-900/20 flex justify-between items-center">
+          <h3 className="text-xs font-bold text-red-400 uppercase tracking-widest flex items-center gap-2">
+             <span>🚑</span> Injury Report
+          </h3>
+          <span className="text-[10px] text-gray-500">{list.length} Active</span>
+       </div>
+       <div className="max-h-60 overflow-y-auto p-0 custom-scrollbar">
+          <table className="w-full text-left text-xs">
+             <thead className="bg-slate-950 text-gray-500 font-mono text-[10px] uppercase">
+                <tr>
+                   <th className="p-3 font-normal">Player</th>
+                   <th className="p-3 font-normal">Pos</th>
+                   <th className="p-3 font-normal">Status</th>
+                </tr>
+             </thead>
+             <tbody className="divide-y divide-slate-800">
+                {list.map((inj, i) => (
+                   <tr key={i} className="hover:bg-slate-800/50 transition">
+                      <td className="p-3 font-bold text-gray-200">{inj.athlete?.displayName || "Unknown"}</td>
+                      <td className="p-3 text-gray-500">{inj.athlete?.position?.abbreviation || "-"}</td>
+                      <td className="p-3">
+                         <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase
+                            ${inj.status === 'Out' || inj.status === 'Injured Reserve' ? 'bg-red-900/50 text-red-200' : 'bg-yellow-900/50 text-yellow-200'}
+                         `}>
+                            {inj.status}
+                         </span>
+                      </td>
+                   </tr>
+                ))}
+             </tbody>
+          </table>
+       </div>
+    </div>
+  );
+}
+
+function SeasonLeadersWidget({ leaders }) {
+  const categories = leaders?.leaders || leaders || [];
+  if (categories.length === 0) return null;
+
+  return (
+    <div className="bg-slate-900/80 rounded-xl border border-blue-900/30 overflow-hidden flex flex-col h-full">
+       <div className="bg-blue-950/20 p-3 border-b border-blue-900/20">
+          <h3 className="text-xs font-bold text-blue-400 uppercase tracking-widest flex items-center gap-2">
+             <span>👑</span> Season Leaders
+          </h3>
+       </div>
+       <div className="p-4 grid gap-4 overflow-y-auto custom-scrollbar">
+          {categories.map((cat, i) => {
+             const leader = cat.leaders?.[0]; 
+             if(!leader) return null;
+             return (
+                <div key={i} className="flex items-center gap-4 border-b border-slate-800 pb-3 last:border-0 last:pb-0">
+                   <img 
+                      src={leader.athlete?.headshot?.href || "https://static.www.nfl.com/image/private/f_auto,q_auto/league/nfl-placeholder"} 
+                      className="w-12 h-12 rounded-full border-2 border-slate-700 bg-slate-800 object-cover"
+                      alt="Player"
+                   />
+                   <div className="flex-1">
+                      <p className="text-[10px] text-gray-500 uppercase font-bold">{cat.displayName}</p>
+                      <p className="text-sm font-bold text-white">{leader.athlete?.displayName}</p>
+                      <p className="text-xs text-blue-400 font-mono">
+                         {leader.displayValue} <span className="text-gray-600 text-[10px]">Total</span>
+                      </p>
+                   </div>
+                </div>
+             );
+          })}
+       </div>
+    </div>
+  );
+}
+
+// --- MODAL DE JUGADOR (CON SOPORTE PARA SIN-STATS) ---
 function PlayerModal({ player, onClose }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -169,7 +250,7 @@ function PlayerModal({ player, onClose }) {
 
   if (!player) return null;
 
-  // Lógica para extraer datos
+  // Procesar datos
   let displayStats = [];
   let seasonTitle = "Current Season Stats";
 
@@ -191,7 +272,6 @@ function PlayerModal({ player, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl relative max-h-[90vh] overflow-y-auto">
-        
         <button 
           onClick={onClose}
           className="absolute top-4 right-4 text-gray-400 hover:text-white bg-black/50 p-2 rounded-full transition z-10"
@@ -310,7 +390,7 @@ function RosterList({ players }) {
 
 // --- COMPONENTE PRINCIPAL ---
 
-export default function DashboardTabs({ history, nextGame, upcoming, news, players, debugData }) {
+export default function DashboardTabs({ history, nextGame, upcoming, news, players, debugData, leaders, injuries }) {
   const [activeTab, setActiveTab] = useState('next');
   
   // ESTADOS
@@ -337,7 +417,6 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
   } : nextGame;
 
   useEffect(() => {
-    // 1. MODO SIMULACIÓN
     if (TEST_LIVE_MODE) {
         setLivePlays(MOCK_PLAYS);
         setLiveStats(MOCK_STATS);
@@ -346,7 +425,6 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
         return;
     }
 
-    // 2. MODO REAL
     if (!nextGame || !nextGame.isLive) return;
 
     const fetchLiveData = async () => {
@@ -442,8 +520,8 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
                             <div className="flex flex-col items-center">
                                 <div className="text-5xl md:text-7xl font-mono font-black text-white tracking-tighter">
                                   {displayGame.patriots.score}<span className="text-gray-600 mx-2">-</span>{displayGame.opponent.score}
-                               </div>
-                               <span className="text-red-400 font-bold mt-2 animate-pulse font-mono text-lg">{displayGame.status}</span>
+                                </div>
+                                <span className="text-red-400 font-bold mt-2 animate-pulse font-mono text-lg">{displayGame.status}</span>
                             </div>
                           ) : (
                             <div className="text-3xl font-black text-slate-700 italic">VS</div>
@@ -471,9 +549,17 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
                         <TopPerformersWidget stats={liveStats} />
                     </div>
                   ) : (
-                    <div className="bg-black/40 rounded-xl p-6 backdrop-blur-sm border border-white/5 mx-auto max-w-2xl text-center">
-                       <p className="text-blue-400 text-xs font-bold uppercase mb-2 tracking-widest">Kickoff Countdown</p>
-                       <Countdown targetDate={displayGame.dateRaw} />
+                    <div className="space-y-6">
+                       <div className="bg-black/40 rounded-xl p-6 backdrop-blur-sm border border-white/5 mx-auto max-w-2xl text-center">
+                          <p className="text-blue-400 text-xs font-bold uppercase mb-2 tracking-widest">Kickoff Countdown</p>
+                          <Countdown targetDate={displayGame.dateRaw} />
+                       </div>
+                       
+                       {/* --- WIDGETS TÁCTICOS (Líderes y Lesiones) --- */}
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                          <SeasonLeadersWidget leaders={leaders} />
+                          <InjuryReportWidget injuries={injuries} />
+                       </div>
                     </div>
                   )}
 
@@ -487,10 +573,7 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 relative">
              {/* TITULAR 2026 CON EFECTO DE SCAN */}
              <div className="text-center mb-8 relative p-6 bg-slate-900/40 rounded-2xl border border-slate-800 overflow-hidden group">
-                
-                {/* Luz de escáner animada */}
                 <div className="absolute top-0 left-[-100%] w-full h-full bg-gradient-to-r from-transparent via-blue-500/10 to-transparent skew-x-12 animate-[shimmer_3s_infinite]"></div>
-
                 <h3 className="text-3xl font-black text-white italic tracking-tighter drop-shadow-lg">
                   <span className="text-blue-500">2026</span> SEASON
                 </h3>

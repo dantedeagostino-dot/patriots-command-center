@@ -14,7 +14,7 @@ const PATRIOTS_ID = '17';
 export async function fetchFromNFL(endpoint, params = '') {
   try {
     const url = `${BASE_URL}/${endpoint}${params ? `?${params}` : ''}`;
-    // Cache de 1 hora para datos estáticos
+    // Cache de 1 hora
     const response = await fetch(url, { ...options, next: { revalidate: 3600 } });
     
     if (!response.ok) {
@@ -44,18 +44,25 @@ export async function getStandings() {
   return await fetchFromNFL('nflstandings', 'year=2024');
 }
 
-// 4. JUGADORES (ROSTER)
+// 4. JUGADORES
 export async function getTeamPlayers() {
   return await fetchFromNFL('nflteamplayers', `teamid=${PATRIOTS_ID}`);
 }
-
 export async function getBasicRoster() {
   return await fetchFromNFL('players/id', `teamId=${PATRIOTS_ID}`);
 }
-
-// 5. ESTADÍSTICAS DE JUGADOR (NUEVO)
 export async function getPlayerStats(playerId) {
   return await fetchFromNFL('player-overview', `playerId=${playerId}`);
+}
+
+// 5. NUEVOS DATOS TÁCTICOS
+export async function getTeamLeaders() {
+  // season=2024 porque es la actual data disponible
+  return await fetchFromNFL('team/leaders', `teamId=${PATRIOTS_ID}&season=2024&limit=3`);
+}
+
+export async function getTeamInjuries() {
+  return await fetchFromNFL('team/v2/injuries', `teamId=${PATRIOTS_ID}`);
 }
 
 // --- MODO EN VIVO ---

@@ -1,17 +1,27 @@
-import { getPatriotsSchedule, getTeamNews, getStandings, getTeamPlayers, getBasicRoster } from '../lib/nflApi';
+import { 
+  getPatriotsSchedule, 
+  getTeamNews, 
+  getStandings, 
+  getTeamPlayers, 
+  getBasicRoster,
+  getTeamLeaders,  // <--- Nuevo
+  getTeamInjuries  // <--- Nuevo
+} from '../lib/nflApi';
 import { processSchedule, getGameInfo } from '../lib/utils';
 import DashboardTabs from '../components/DashboardTabs';
 
 export default async function Home() {
-  // 1. Obtener datos
-  let [scheduleRaw, newsRaw, standingsRaw, playersRaw] = await Promise.all([
+  // 1. Obtener TODOS los datos en paralelo
+  let [scheduleRaw, newsRaw, standingsRaw, playersRaw, leadersRaw, injuriesRaw] = await Promise.all([
     getPatriotsSchedule(),
     getTeamNews(),
     getStandings(),
-    getTeamPlayers()
+    getTeamPlayers(),
+    getTeamLeaders(), // Nuevo
+    getTeamInjuries() // Nuevo
   ]);
 
-  // PLAN B: Si la API principal falla (null), usamos la básica
+  // PLAN B: Si el roster completo falla
   if (!playersRaw) {
       console.log("⚠️ Roster completo falló, usando básico...");
       playersRaw = await getBasicRoster();
@@ -49,15 +59,12 @@ export default async function Home() {
      }
   } catch (e) { console.error(e); }
 
-  // 5. PROCESAR ROSTER (Lógica Final)
+  // 5. Procesar Roster
   let finalRoster = [];
   if (playersRaw) {
-      // CASO CORRECTO DETECTADO EN LA CAPTURA: team -> athletes
       if (playersRaw.team && playersRaw.team.athletes) {
           finalRoster = playersRaw.team.athletes;
-      }
-      // Otros casos por seguridad
-      else if (Array.isArray(playersRaw)) {
+      } else if (Array.isArray(playersRaw)) {
           finalRoster = playersRaw;
       } else if (playersRaw.teamPlayers) {
           finalRoster = playersRaw.teamPlayers;
@@ -101,7 +108,8 @@ export default async function Home() {
               upcoming={upcomingFormatted}
               news={cleanNews}
               players={finalRoster}
-              // Ya no pasamos debugData para que se vea limpio si funciona
+              leaders={leadersRaw}   // <--- Pasamos líderes
+              injuries={injuriesRaw} // <--- Pasamos lesiones
            />
       </div>
     </main>
