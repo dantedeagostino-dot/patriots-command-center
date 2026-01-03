@@ -1,3 +1,17 @@
+import { Geist, Geist_Mono } from "next/font/google";
+import "./globals.css";
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+// --- AQUÍ ESTÁ TU NUEVA METADATA ---
 export const metadata = {
   title: "Patriots Command Center",
   description: "WELCOME TO THE PATRIOTS WAR ROOM",
@@ -10,3 +24,16 @@ export const metadata = {
     type: 'website',
   },
 };
+
+// --- ESTA ES LA FUNCIÓN QUE FALTABA O ESTABA ROTA ---
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en">
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
+        {children}
+      </body>
+    </html>
+  );
+}
