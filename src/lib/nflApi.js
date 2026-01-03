@@ -49,42 +49,26 @@ export async function getStandings() {
 export async function getTeamInjuries() {
   return await fetchFromNFL('team/v2/injuries', `teamId=${PATRIOTS_ID}`);
 }
+
 // --- NUEVAS FUNCIONES PARA EL MODO EN VIVO ---
 
 // 1. Jugada a Jugada (Play-by-Play)
-// Documentación: Get NFL Game Play-by-Play
 export async function getGamePlayByPlay(gameId) {
   return await fetchFromNFL('nflplay', `id=${gameId}`);
 }
 
 // 2. Estadísticas y Líderes (Box Score)
-// Documentación: Get NFL Game Box Score
 export async function getGameBoxScore(gameId) {
   return await fetchFromNFL('nflboxscore', `id=${gameId}`);
 }
 
 // 3. Probabilidades y Apuestas (Picks/Odds)
-// Documentación: Get NFL PickCenter Data
 export async function getGameOdds(gameId) {
   return await fetchFromNFL('nflpicks', `id=${gameId}`);
 }
-// ... (mantiene todo lo anterior)
 
-// 5. OBTENER JUGADORES (Roster)
-// Documentación: Get NFL Team Players
+// 5. OBTENER JUGADORES (Roster) - CORREGIDO ✅
 export async function getTeamPlayers() {
-  // Usamos el ID 17 de los Patriots
-  return await fetchFromNFL('nflteamplayers', 'teamid=17');
-}
-
-// 6. OBTENER ESTADÍSTICAS DE JUGADORES
-// Documentación: Get NFL Player Stats
-export async function getPlayerStats(playerId) {
-  return await fetchFromNFL('nflplayerstats', `playerid=${playerId}&season=2024`);
-}
-
-// 7. OBTENER DATOS DE PARTIDOS EN VIVO
-// Documentación: Get NFL Live Scores
-export async function getLiveScores() {
-  return await fetchFromNFL('nfllivescores');
+  // El endpoint correcto suele ser 'nfl-team-roster' y el parámetro 'teamId' (con I mayúscula)
+  return await fetchFromNFL('nfl-team-roster', `teamId=${PATRIOTS_ID}`);
 }
