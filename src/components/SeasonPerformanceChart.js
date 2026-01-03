@@ -3,7 +3,10 @@ import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Cell } from 'recharts';
 
 export default function SeasonPerformanceChart({ data }) {
-  if (!data || data.length === 0) return null;
+  // 🛡️ CORRECCIÓN DE SEGURIDAD CRÍTICA:
+  // Si data no existe, o NO es un array, o está vacío, no renderizar nada.
+  // Esto evita el error "b.map is not a function" durante el build.
+  if (!data || !Array.isArray(data) || data.length === 0) return null;
 
   return (
     <div className="bg-slate-900/50 rounded-xl border border-slate-700 p-4 mb-6 h-64">
@@ -21,7 +24,7 @@ export default function SeasonPerformanceChart({ data }) {
             <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
             <XAxis 
               dataKey="uniqueId" 
-              tickFormatter={(val) => val.split('_')[0]} // ⚠️ AQUÍ ESTÁ EL TRUCO: Mostramos solo el nombre
+              tickFormatter={(val) => val ? val.split('_')[0] : ''} // Validación extra
               tick={{ fill: '#64748b', fontSize: 10, fontWeight: 'bold' }} 
               axisLine={false} 
               tickLine={false}
