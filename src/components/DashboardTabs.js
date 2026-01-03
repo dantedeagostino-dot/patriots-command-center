@@ -140,14 +140,12 @@ function NewsSection({ news }) {
   );
 }
 
-// --- MODAL DE ESTADÍSTICAS CORREGIDO ---
+// --- MODAL DE ESTADÍSTICAS (Versión Final con Diseño) ---
 function PlayerModal({ player, onClose }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
 
-  // ✅ CORRECCIÓN CLAVE: Usamos 'playerId' si existe, o 'id' como respaldo.
-  // Según tu documento API Overview, el campo es 'playerId'.
   const validId = player.playerId || player.id;
 
   useEffect(() => {
@@ -175,6 +173,28 @@ function PlayerModal({ player, onClose }) {
   }, [validId]);
 
   if (!player) return null;
+
+  // Lógica para extraer datos de "player_overview"
+  let displayStats = [];
+  let seasonTitle = "Season Stats";
+
+  if (stats && stats.player_overview && stats.player_overview.statistics) {
+      const apiStats = stats.player_overview.statistics;
+      seasonTitle = apiStats.displayName || seasonTitle;
+      
+      // Obtenemos las etiquetas (Labels) ej: "TOT", "SOLO", "SACK"
+      const labels = apiStats.labels || [];
+      // Obtenemos los valores del último split (la temporada actual)
+      const values = apiStats.splits?.[0]?.stats || [];
+
+      // Unimos etiquetas con valores
+      if (labels.length > 0 && values.length > 0) {
+          displayStats = labels.map((label, index) => ({
+              name: label,
+              value: values[index] || "-"
+          }));
+      }
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
@@ -208,36 +228,32 @@ function PlayerModal({ player, onClose }) {
            {loading ? (
              <div className="flex flex-col items-center justify-center h-40 text-gray-500 gap-2">
                 <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                <p className="text-xs font-mono">Fetching data for ID: {validId}...</p>
+                <p className="text-xs font-mono">Fetching data...</p>
              </div>
-           ) : stats ? (
+           ) : displayStats.length > 0 ? (
              <div className="space-y-4">
-                {/* 1. INTENTO DE MOSTRAR STATS SI EXISTEN */}
-                {stats.items ? (
-                   <div className="grid grid-cols-2 gap-4">
-                      {stats.items.map((item, i) => (
-                         <div key={i} className="bg-slate-800 p-3 rounded border border-slate-700">
-                            <p className="text-[10px] text-gray-400 uppercase font-bold">{item.name || "Stat"}</p>
-                            <p className="text-xl font-bold text-white">{item.value || "--"}</p>
-                         </div>
-                      ))}
-                   </div>
-                ) : (
-                   /* 2. SI NO HAY ESTRUCTURA ESTÁNDAR, MOSTRAMOS LA DATA CRUDA (DEBUG) */
-                   <div className="text-center">
-                      <p className="text-blue-400 text-xs font-bold uppercase mb-2">Player Overview Data</p>
-                      {/* Aquí volcamos lo que llegue para verlo y poder maquetarlo luego */}
-                      <pre className="text-left text-[10px] bg-black p-4 rounded border border-slate-800 overflow-auto max-h-80 text-green-400 font-mono">
-                        {JSON.stringify(stats, null, 2)}
-                      </pre>
-                   </div>
-                )}
+                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-slate-800 pb-2">{seasonTitle}</h3>
+                <div className="grid grid-cols-3 gap-3">
+                   {displayStats.map((stat, i) => (
+                      <div key={i} className="bg-slate-800/50 p-3 rounded-lg border border-slate-700/50 flex flex-col items-center justify-center text-center">
+                         <span className="text-[10px] text-blue-400 font-bold uppercase">{stat.name}</span>
+                         <span className="text-xl font-black text-white mt-1">{stat.value}</span>
+                      </div>
+                   ))}
+                </div>
              </div>
            ) : (
-             <div className="text-center text-gray-500 py-10 bg-slate-950/50 rounded-xl border border-slate-800/50">
-                <p className="text-red-400 font-bold mb-2">No Data Returned</p>
-                <p className="text-xs font-mono">API ID Used: {validId}</p>
-                {errorMsg && <p className="text-xs text-red-500 mt-2">{errorMsg}</p>}
+             <div className="text-center">
+                {/* Fallback si no hay formato conocido, mostramos el JSON crudo pero más pequeño */}
+                <p className="text-gray-500 text-sm mb-4">Detailed stats not available.</p>
+                {stats && (
+                    <details className="text-left">
+                        <summary className="text-[10px] text-gray-600 cursor-pointer hover:text-gray-400">View Raw Data</summary>
+                        <pre className="mt-2 text-[8px] bg-black p-2 rounded text-green-500 overflow-auto max-h-40">
+                            {JSON.stringify(stats, null, 2)}
+                        </pre>
+                    </details>
+                )}
              </div>
            )}
         </div>
