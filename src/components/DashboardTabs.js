@@ -358,11 +358,14 @@ function SeasonLeadersWidget({ leaders }) {
 function PlayerModal({ player, onClose }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState("");
+
   const validId = player.playerId || player.id;
 
   useEffect(() => {
     if (validId) {
       setLoading(true);
+      setErrorMsg("");
       fetch(`/api/player?id=${validId}`)
         .then(res => {
             if(!res.ok) throw new Error("Error fetching data");
@@ -374,8 +377,12 @@ function PlayerModal({ player, onClose }) {
         })
         .catch(err => {
             console.error(err);
+            setErrorMsg("Connection failed");
             setLoading(false);
         });
+    } else {
+        setErrorMsg("Invalid Player ID");
+        setLoading(false);
     }
   }, [validId]);
 
@@ -484,7 +491,12 @@ function GameStatsModal({ game, stats, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in zoom-in duration-200">
       <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl relative max-h-[90vh] overflow-y-auto">
-        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white bg-black/50 p-2 rounded-full transition z-10">✕</button>
+        <button 
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-400 hover:text-white bg-black/50 p-2 rounded-full transition z-10"
+        >
+          ✕
+        </button>
         
         <div className="bg-gradient-to-b from-slate-800 to-slate-900 p-6 text-center border-b border-slate-700">
             <div className="text-gray-400 text-xs uppercase tracking-widest mb-4 font-bold">{game.dateString} • {game.venue}</div>
@@ -612,19 +624,9 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
   const [selectedHistoryGame, setSelectedHistoryGame] = useState(null);
   const [historyGameStats, setHistoryGameStats] = useState(null);
 
-  // Simulador
-  const displayGame = TEST_LIVE_MODE && nextGame ? {
-      ...nextGame, 
-      isLive: true, 
-      status: "Q4 - 01:58",
-      patriots: { ...nextGame.patriots, score: "27", name: String(nextGame.patriots.name || "Patriots") },
-      opponent: { ...nextGame.opponent, score: "24", name: String(nextGame.opponent.name || "Opponent") },
-      yardLine: 68, possessionTeam: 'home', down: 2, distance: 5
-  } : nextGame;
-
-  // ✅ CORRECCIÓN DE ORDENAMIENTO (Oldest -> Newest)
+  // ✅ AQUÍ ESTÁ EL CAMBIO CLAVE: ORDENAMIENTO POR FECHA
   const seasonChartData = history ? [...history]
-      .sort((a, b) => new Date(a.dateRaw || 0) - new Date(b.dateRaw || 0)) // Ordenar cronológicamente
+      .sort((a, b) => new Date(a.dateRaw) - new Date(b.dateRaw)) // Ordenamos de más antiguo a más reciente
       .map(game => {
           const patsScore = parseInt(game.patriots.score) || 0;
           const oppScore = parseInt(game.opponent.score) || 0;
@@ -638,6 +640,16 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
               score: `${patsScore}-${oppScore}`
           };
       }) : [];
+
+  // Simulador
+  const displayGame = TEST_LIVE_MODE && nextGame ? {
+      ...nextGame, 
+      isLive: true, 
+      status: "Q4 - 01:58",
+      patriots: { ...nextGame.patriots, score: "27", name: String(nextGame.patriots.name || "Patriots") },
+      opponent: { ...nextGame.opponent, score: "24", name: String(nextGame.opponent.name || "Opponent") },
+      yardLine: 68, possessionTeam: 'home', down: 2, distance: 5
+  } : nextGame;
 
   useEffect(() => {
     if (TEST_LIVE_MODE) {
@@ -697,7 +709,7 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
       <div className="min-h-[400px]">
         {activeTab === 'history' && (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-            {/* Gráfico de Performance */}
+            {/* GRÁFICO DE PERFORMANCE DE TEMPORADA */}
             <SeasonPerformanceChart data={seasonChartData} />
 
             <NewsSection news={news} />
@@ -734,7 +746,7 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
           </div>
         )}
 
-        {/* RESTO DE LOS TABS SE MANTIENEN IGUAL (NEXT, UPCOMING, ROSTER) */}
+        {/* --- PESTAÑAS NEXT, UPCOMING, ROSTER (Sin cambios) --- */}
         {activeTab === 'next' && (
           <div className="animate-in fade-in zoom-in duration-500">
              {displayGame ? (
@@ -805,7 +817,6 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
                           <Countdown targetDate={displayGame.dateRaw} />
                        </div>
                        
-                       {/* --- WIDGETS TÁCTICOS (Líderes y Lesiones) --- */}
                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
                           <SeasonLeadersWidget leaders={leaders} />
                           <InjuryReportWidget injuries={injuries} />
@@ -818,7 +829,6 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
           </div>
         )}
 
-        {/* --- PESTAÑA UPCOMING --- */}
         {activeTab === 'upcoming' && (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 relative">
              <div className="text-center mb-8 relative p-6 bg-slate-900/40 rounded-2xl border border-slate-800 overflow-hidden group">
@@ -860,7 +870,6 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
           </div>
         )}
 
-        {/* --- PESTAÑA ROSTER --- */}
         {activeTab === 'roster' && (
            <div className="min-h-[200px]">
              {players && players.length > 0 ? (
