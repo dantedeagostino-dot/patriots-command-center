@@ -5,7 +5,7 @@ import ScoreTrendChart from './ScoreTrendChart';
 import SeasonPerformanceChart from './SeasonPerformanceChart';
 
 // --- CONFIGURACIÓN ---
-const TEST_LIVE_MODE = true; // ⚠️ Poner en false para producción
+const TEST_LIVE_MODE = false; // ⚠️ Poner en false para producción
 const POLLING_INTERVAL = 15000; 
 
 // --- MOCKS CON DATOS ---
