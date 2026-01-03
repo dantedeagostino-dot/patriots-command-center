@@ -4,24 +4,24 @@ import {
   getStandings, 
   getTeamPlayers, 
   getBasicRoster,
-  getTeamLeaders,  // <--- Nuevo
-  getTeamInjuries  // <--- Nuevo
+  getTeamLeaders,  // <--- Asegúrate de tener esto
+  getTeamInjuries  // <--- Y esto
 } from '../lib/nflApi';
 import { processSchedule, getGameInfo } from '../lib/utils';
 import DashboardTabs from '../components/DashboardTabs';
 
 export default async function Home() {
-  // 1. Obtener TODOS los datos en paralelo
+  // 1. Obtener TODOS los datos (incluyendo líderes y lesiones)
   let [scheduleRaw, newsRaw, standingsRaw, playersRaw, leadersRaw, injuriesRaw] = await Promise.all([
     getPatriotsSchedule(),
     getTeamNews(),
     getStandings(),
     getTeamPlayers(),
-    getTeamLeaders(), // Nuevo
-    getTeamInjuries() // Nuevo
+    getTeamLeaders(), // <--- Pedir líderes
+    getTeamInjuries() // <--- Pedir lesiones
   ]);
 
-  // PLAN B: Si el roster completo falla
+  // PLAN B: Si el roster falla
   if (!playersRaw) {
       console.log("⚠️ Roster completo falló, usando básico...");
       playersRaw = await getBasicRoster();
@@ -51,7 +51,7 @@ export default async function Home() {
      cleanNews = [{ title: "Check official site for latest updates", link: "https://www.patriots.com/news/", source: "System", pubDate: new Date().toISOString() }];
   }
 
-  // 4. Procesar Récord
+  // 4. Récord
   let seasonRecord = "0-0";
   try {
      if (nextGameFormatted?.patriots?.record && nextGameFormatted.patriots.record !== "0-0") {
@@ -59,7 +59,7 @@ export default async function Home() {
      }
   } catch (e) { console.error(e); }
 
-  // 5. Procesar Roster
+  // 5. Roster
   let finalRoster = [];
   if (playersRaw) {
       if (playersRaw.team && playersRaw.team.athletes) {
@@ -108,8 +108,8 @@ export default async function Home() {
               upcoming={upcomingFormatted}
               news={cleanNews}
               players={finalRoster}
-              leaders={leadersRaw}   // <--- Pasamos líderes
-              injuries={injuriesRaw} // <--- Pasamos lesiones
+              leaders={leadersRaw}   // <--- ¡Esto es vital para que se vean!
+              injuries={injuriesRaw} // <--- ¡Esto también!
            />
       </div>
     </main>

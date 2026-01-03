@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import ScoreTrendChart from './ScoreTrendChart';
 
 // --- CONFIGURACIÓN ---
-const TEST_LIVE_MODE = true; 
+const TEST_LIVE_MODE = false; 
 const POLLING_INTERVAL = 15000; 
 
 // --- MOCKS (Respaldo) ---
