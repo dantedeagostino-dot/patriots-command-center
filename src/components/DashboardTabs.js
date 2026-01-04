@@ -5,10 +5,10 @@ import ScoreTrendChart from './ScoreTrendChart';
 import SeasonPerformanceChart from './SeasonPerformanceChart';
 
 // --- CONFIGURACIÓN ---
-const TEST_LIVE_MODE = false; // ⚠️ Poner en false para producción
+const TEST_LIVE_MODE = false; // ⚠️ Mantenlo en false para ver datos reales
 const POLLING_INTERVAL = 15000; 
 
-// --- MOCKS CON DATOS ---
+// --- MOCKS CON DATOS (Solo para modo prueba) ---
 const MOCK_PLAYS = [
     { time: "Q4 01:58", text: "Drake Maye pass deep right to Douglas for 25 yards TOUCHDOWN." },
     { time: "Q4 02:05", text: "Stevenson rush up the middle for 4 yards." },
@@ -276,17 +276,13 @@ function StandingsWidget({ standings }) {
 }
 
 function InjuryReportWidget({ injuries }) {
-  // 🛡️ CORRECCIÓN DE SEGURIDAD:
-  // Verificamos estrictamente que sea un array. Si es un objeto de error u otra cosa, usamos [].
   let list = [];
-  
   if (injuries?.injuries && Array.isArray(injuries.injuries)) {
       list = injuries.injuries;
   } else if (Array.isArray(injuries)) {
       list = injuries;
   }
 
-  // Si la lista está vacía, no renderizamos nada.
   if (list.length === 0) return null;
 
   return (
@@ -328,10 +324,7 @@ function InjuryReportWidget({ injuries }) {
 }
 
 function SeasonLeadersWidget({ leaders }) {
-  // 🛡️ CORRECCIÓN DE SEGURIDAD:
-  // Aseguramos que 'categories' sea siempre un array válido.
   let categories = [];
-  
   if (leaders?.leaders && Array.isArray(leaders.leaders)) {
       categories = leaders.leaders;
   } else if (Array.isArray(leaders)) {
@@ -372,6 +365,7 @@ function SeasonLeadersWidget({ leaders }) {
     </div>
   );
 }
+
 function PlayerModal({ player, onClose }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -494,7 +488,6 @@ function GameStatsModal({ game, stats, onClose }) {
   );
 }
 
-// --- LISTA DE JUGADORES (AQUÍ ESTÁ LA FUNCIÓN RESTAURADA) ---
 function RosterList({ players }) {
   const [search, setSearch] = useState("");
   const [selectedPlayer, setSelectedPlayer] = useState(null); 
@@ -554,7 +547,7 @@ function RosterList({ players }) {
   );
 }
 
-// --- COMPONENTE PRINCIPAL ---
+// --- COMPONENTE PRINCIPAL (ACTUALIZADO) ---
 
 export default function DashboardTabs({ history, nextGame, upcoming, news, players, debugData, leaders, injuries, standings }) {
   const [activeTab, setActiveTab] = useState('next');
@@ -564,31 +557,36 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
   const [liveStats, setLiveStats] = useState(null);
   const [liveOdds, setLiveOdds] = useState(null);
   const [chartData, setChartData] = useState([]);
+  
+  // ✅ ESTADO PARA EL MARCADOR EN TIEMPO REAL
+  const [liveScoreboard, setLiveScoreboard] = useState(null); 
 
   // Historial
   const [selectedHistoryGame, setSelectedHistoryGame] = useState(null);
   const [historyGameStats, setHistoryGameStats] = useState(null);
 
-  // ✅ CORRECCIÓN DE ORDENAMIENTO Y CLAVES ÚNICAS (SOLUCIÓN DEFINITIVA)
   const seasonChartData = history ? [...history]
-      .sort((a, b) => new Date(a.dateRaw).getTime() - new Date(b.dateRaw).getTime()) // 1. Ordenar por fecha (timestamp)
+      .sort((a, b) => new Date(a.dateRaw).getTime() - new Date(b.dateRaw).getTime()) 
       .map((game, index) => {
           const patsScore = parseInt(game.patriots.score) || 0;
           const oppScore = parseInt(game.opponent.score) || 0;
           const diff = patsScore - oppScore;
-          
           return {
               date: game.dateString,
               opponent: game.opponent.name,
               oppCode: game.opponent.name.substring(0, 3).toUpperCase(),
-              // 2. Crear ID único para evitar que Recharts agrupe los "JET" repetidos
               uniqueId: `${game.opponent.name.substring(0, 3).toUpperCase()}_${index}`, 
               diff: diff,
               score: `${patsScore}-${oppScore}`
           };
       }) : [];
 
-  // Simulador
+  // Objeto base para mostrar (datos estáticos iniciales)
+  const baseGame = nextGame; 
+
+  // --- LÓGICA DE FUSIÓN DE DATOS ---
+  // Si estamos en modo test, usamos mocks.
+  // Si NO, verificamos si tenemos datos en vivo (liveScoreboard). Si sí, sobrescribimos los datos estáticos.
   const displayGame = TEST_LIVE_MODE && nextGame ? {
       ...nextGame, 
       isLive: true, 
@@ -596,26 +594,60 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
       patriots: { ...nextGame.patriots, score: "27", name: String(nextGame.patriots.name || "Patriots") },
       opponent: { ...nextGame.opponent, score: "24", name: String(nextGame.opponent.name || "Opponent") },
       yardLine: 68, possessionTeam: 'home', down: 2, distance: 5
-  } : nextGame;
+  } : (liveScoreboard ? {
+      ...baseGame,
+      isLive: true, // Forzamos visualmente a true si tenemos datos frescos
+      status: liveScoreboard.status,
+      patriots: { ...baseGame.patriots, score: liveScoreboard.patsScore },
+      opponent: { ...baseGame.opponent, score: liveScoreboard.oppScore }
+  } : baseGame);
 
   useEffect(() => {
     if (TEST_LIVE_MODE) {
         setLivePlays(MOCK_PLAYS); setLiveStats(MOCK_STATS); setLiveOdds(MOCK_ODDS); setChartData(MOCK_CHART_DATA); return;
     }
-    if (!nextGame || !nextGame.isLive) return;
+    // IMPORTANTE: Quitamos la restricción !nextGame.isLive para que SIEMPRE busque actualizaciones si hay juego
+    if (!nextGame) return;
 
     const fetchLiveData = async () => {
       try {
         const res = await fetch(`/api/live?id=${nextGame.id}`);
         const data = await res.json();
+        
+        // 1. Actualizar jugadas
         if (data.plays) setLivePlays(data.plays.drives?.current?.plays || data.plays.plays || []);
+        
+        // 2. Actualizar apuestas
         if (data.odds) {
            const provider = data.odds.pickcenter?.[0] || {};
            setLiveOdds({ spread: provider.spread || "-", overUnder: provider.overUnder || "-", moneyline: provider.moneyline || "-" });
         }
+
+        // 3. --- LÓGICA CRÍTICA: ACTUALIZAR MARCADOR Y ESTADO ---
+        if (data.boxScore && data.boxScore.teams) {
+            // Buscamos a los Patriots (ID 17) y al oponente
+            const patsTeam = data.boxScore.teams.find(t => t.team.id === '17');
+            const oppTeam = data.boxScore.teams.find(t => t.team.id !== '17');
+            
+            // Buscamos el estado del reloj (Ej: "Q1 10:00")
+            let gameStatus = "Live";
+            if (data.header?.competitions?.[0]?.status?.type?.detail) {
+                gameStatus = data.header.competitions[0].status.type.detail;
+            } else if (data.boxScore?.status?.type?.detail) {
+                gameStatus = data.boxScore.status.type.detail;
+            }
+
+            setLiveScoreboard({
+                patsScore: patsTeam ? patsTeam.score : "0",
+                oppScore: oppTeam ? oppTeam.score : "0",
+                status: gameStatus
+            });
+        }
+
         setLiveStats({ passing: {name:"-", stat:"-"}, rushing: {name:"-", stat:"-"}, receiving: {name:"-", stat:"-"} }); 
-      } catch (e) { console.error(e); }
+      } catch (e) { console.error("Error fetching live data", e); }
     };
+
     fetchLiveData();
     const interval = setInterval(fetchLiveData, POLLING_INTERVAL);
     return () => clearInterval(interval);
@@ -656,9 +688,7 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
       <div className="min-h-[400px]">
         {activeTab === 'history' && (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-            {/* AQUÍ ESTÁ EL GRÁFICO CON DATOS CORREGIDOS */}
             <SeasonPerformanceChart data={seasonChartData} />
-
             <NewsSection news={news} />
             <div className="space-y-3">
               {history.length > 0 ? history.map(game => (
@@ -693,7 +723,6 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
           </div>
         )}
 
-        {/* --- PESTAÑAS NEXT, UPCOMING, ROSTER (Sin cambios) --- */}
         {activeTab === 'next' && (
           <div className="animate-in fade-in zoom-in duration-500">
              {displayGame ? (
