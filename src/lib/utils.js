@@ -3,7 +3,7 @@
 // URL de respaldo general
 const NFL_LOGO = "https://upload.wikimedia.org/wikipedia/en/thumb/a/a2/National_Football_League_logo.svg/1200px-National_Football_League_logo.svg.png";
 
-// ✅ DICCIONARIO DE LOGOS OFICIALES HD (CORREGIDO)
+// ✅ DICCIONARIO DE LOGOS OFICIALES HD
 const OFFICIAL_LOGOS = {
   // AFC East
   '17': "https://upload.wikimedia.org/wikipedia/en/thumb/b/b9/New_England_Patriots_logo.svg/1200px-New_England_Patriots_logo.svg.png", // Patriots
@@ -13,9 +13,9 @@ const OFFICIAL_LOGOS = {
 
   // AFC North
   '33': "https://upload.wikimedia.org/wikipedia/en/thumb/1/16/Baltimore_Ravens_logo.svg/1200px-Baltimore_Ravens_logo.svg.png",   // Ravens
-  '4':  "https://a.espncdn.com/i/teamlogos/nfl/500/cin.png", // Bengals (CORREGIDO)
+  '4':  "https://a.espncdn.com/i/teamlogos/nfl/500/cin.png", // Bengals
   '5':  "https://upload.wikimedia.org/wikipedia/en/thumb/d/d9/Cleveland_Browns_logo.svg/1200px-Cleveland_Browns_logo.svg.png",     // Browns
-  '23': "https://a.espncdn.com/i/teamlogos/nfl/500/pit.png", // Steelers (CORREGIDO)
+  '23': "https://a.espncdn.com/i/teamlogos/nfl/500/pit.png", // Steelers
 
   // AFC South
   '34': "https://upload.wikimedia.org/wikipedia/en/thumb/2/28/Houston_Texans_logo.svg/1200px-Houston_Texans_logo.svg.png",       // Texans
@@ -31,7 +31,7 @@ const OFFICIAL_LOGOS = {
 
   // NFC East
   '6':  "https://upload.wikimedia.org/wikipedia/en/thumb/1/15/Dallas_Cowboys_logo.svg/1200px-Dallas_Cowboys_logo.svg.png",       // Cowboys
-  '19': "https://a.espncdn.com/i/teamlogos/nfl/500/nyg.png", // Giants (CORREGIDO)
+  '19': "https://a.espncdn.com/i/teamlogos/nfl/500/nyg.png", // Giants
   '21': "https://upload.wikimedia.org/wikipedia/en/thumb/8/8e/Philadelphia_Eagles_logo.svg/1200px-Philadelphia_Eagles_logo.svg.png", // Eagles
   '28': "https://upload.wikimedia.org/wikipedia/en/thumb/6/63/Washington_Commanders_logo.svg/1200px-Washington_Commanders_logo.svg.png", // Commanders
 
@@ -43,8 +43,8 @@ const OFFICIAL_LOGOS = {
 
   // NFC South
   '1':  "https://upload.wikimedia.org/wikipedia/en/thumb/c/c5/Atlanta_Falcons_logo.svg/1200px-Atlanta_Falcons_logo.svg.png",       // Falcons
-  '29': "https://a.espncdn.com/i/teamlogos/nfl/500/car.png", // Panthers (CORREGIDO)
-  '18': "https://a.espncdn.com/i/teamlogos/nfl/500/no.png", // Saints (CORREGIDO)
+  '29': "https://a.espncdn.com/i/teamlogos/nfl/500/car.png", // Panthers
+  '18': "https://a.espncdn.com/i/teamlogos/nfl/500/no.png", // Saints
   '27': "https://upload.wikimedia.org/wikipedia/en/thumb/d/db/Tampa_Bay_Buccaneers_logo.svg/1200px-Tampa_Bay_Buccaneers_logo.svg.png", // Buccaneers
 
   // NFC West
@@ -60,7 +60,7 @@ export function processSchedule(scheduleData) {
   }
 
   const events = scheduleData.events;
-  const now = new Date();
+  const now = new Date(); // Hora actual exacta
 
   // 1. Asegurar que las fechas sean objetos Date válidos y ordenar
   events.sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -73,26 +73,42 @@ export function processSchedule(scheduleData) {
     const gameDate = new Date(game.date);
     const statusType = game.status?.type;
     
-    // Un juego es "History" SOLO si ya terminó
+    // 1. Si ya está marcado como completado, es historia sin dudas.
     if (statusType?.completed) {
       history.push(game);
       continue;
     }
 
-    if (gameDate > now) {
-      if (!next) {
-        next = game; // El primer juego futuro es el "Next"
-      } else {
-        upcoming.push(game); // El resto son "Upcoming"
-      }
-    } else {
-      // Si la fecha ya pasó pero no está completed, puede estar en juego
-      const state = statusType?.state;
-      if (state === 'in' || state === 'in-progress') {
-         next = game;
-      } else {
-         history.push(game);
-      }
+    // LÓGICA MEJORADA: Definir el "Juego Actual/Siguiente"
+    
+    // Calculamos la diferencia en horas entre AHORA y el partido
+    // Negativo = el partido ya empezó hace X horas
+    // Positivo = faltan X horas para el partido
+    const diffHours = (gameDate - now) / 1000 / 60 / 60;
+
+    // Es el juego "Next" si:
+    // A. Aún no tenemos un "next" asignado.
+    // B. Y ADEMÁS: Es en el futuro (diffHours > 0)
+    // C. O empezó hace menos de 5 horas (diffHours > -5)
+    //    (Esto atrapa el partido aunque la API tarde en ponerlo 'in-progress')
+    
+    if (!next) {
+        // Si el juego es futuro O es muy reciente (ventana de 5 horas desde el inicio)
+        if (diffHours > -5) { 
+            next = game; // ¡Lo encontramos! Este es el que mostraremos en la pantalla principal
+            continue;    // Pasamos al siguiente ciclo
+        }
+    }
+
+    // Si ya encontramos el "Next", y este juego es futuro, va a "Upcoming"
+    if (next && gameDate > now && game.id !== next.id) {
+        upcoming.push(game);
+        continue;
+    }
+
+    // Si no cayó en ninguno de los anteriores (es viejo y no está completed, o es un error), lo mandamos a history
+    if (game.id !== next?.id) {
+        history.push(game);
     }
   }
 
@@ -125,7 +141,7 @@ export function getGameInfo(game) {
     return competitor.score.toString();
   };
 
-  // ✅ FUNCIÓN MEJORADA PARA OBTENER LOGO
+  // Función mejorada para obtener logo
   const getLogo = (competitor) => {
       const teamId = competitor?.team?.id;
       // 1. Si tenemos un logo oficial en nuestra lista, úsalo
@@ -151,14 +167,14 @@ export function getGameInfo(game) {
     isLive: game.status?.type?.state === 'in', 
     patriots: {
       score: getScore(patriots),
-      logo: getLogo(patriots), // <--- Aquí usará el logo oficial
+      logo: getLogo(patriots), 
       name: patriots.team?.shortDisplayName || "Pats",
       record: patriots.records?.[0]?.summary || "0-0",
       isHome: patriots.homeAway === 'home'
     },
     opponent: {
       score: getScore(opponent),
-      logo: getLogo(opponent), // <--- Aquí también
+      logo: getLogo(opponent), 
       name: opponent.team?.shortDisplayName || "Opponent",
       record: opponent.records?.[0]?.summary || "0-0"
     }

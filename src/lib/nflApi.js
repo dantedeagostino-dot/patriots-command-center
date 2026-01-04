@@ -15,7 +15,7 @@ export async function fetchFromNFL(endpoint, params = '') {
   try {
     const url = `${BASE_URL}/${endpoint}${params ? `?${params}` : ''}`;
     // Cache de 1 hora
-    const response = await fetch(url, { ...options, next: { revalidate: 3600 } });
+    const response = await fetch(url, { ...options, next: { revalidate: 10 } });
     
     if (!response.ok) {
       console.error(`Error API ${endpoint}: ${response.status}`);
