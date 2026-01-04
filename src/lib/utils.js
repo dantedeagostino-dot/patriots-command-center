@@ -123,13 +123,13 @@ export function getGameInfo(game) {
   if (!competition) return null;
 
   const competitors = competition.competitors || [];
-  // Identificamos a los Patriots por su ID '17'
   const patriots = competitors.find(c => c.team.id === '17') || competitors[0];
   const opponent = competitors.find(c => c.team.id !== '17') || competitors[1];
 
   if (!patriots || !opponent) return null;
 
   const gameDate = new Date(game.date);
+  const now = new Date(); // Obtenemos la hora actual para comparar
 
   // Función segura para obtener score
   const getScore = (competitor) => {
@@ -144,17 +144,27 @@ export function getGameInfo(game) {
   // Función mejorada para obtener logo
   const getLogo = (competitor) => {
       const teamId = competitor?.team?.id;
-      // 1. Si tenemos un logo oficial en nuestra lista, úsalo
       if (teamId && OFFICIAL_LOGOS[teamId]) {
           return OFFICIAL_LOGOS[teamId];
       }
-      // 2. Si no, usa el que viene de la API
       if (competitor?.team?.logo) {
           return competitor.team.logo;
       }
-      // 3. Si todo falla, usa el logo de la NFL
       return NFL_LOGO;
   };
+
+  // --- LÓGICA DE ESTADO EN VIVO CORREGIDA ---
+  // 1. ¿La API dice que está activo?
+  const apiSaysLive = game.status?.type?.state === 'in';
+  
+  // 2. ¿La API dice que terminó?
+  const isFinished = game.status?.type?.state === 'post';
+
+  // 3. ¿Ya pasó la hora de inicio? (Damos 5 minutos de gracia antes de forzar la vista)
+  const isPastStartTime = now >= gameDate;
+
+  // CONCLUSIÓN: Es Live si la API lo dice, O SI ya es la hora y no ha terminado.
+  const isLive = apiSaysLive || (isPastStartTime && !isFinished);
 
   return {
     id: game.id,
@@ -164,7 +174,7 @@ export function getGameInfo(game) {
     name: game.name || "TBD",
     venue: competition.venue?.fullName || "Stadium TBD",
     status: game.status?.type?.detail || "Scheduled", 
-    isLive: game.status?.type?.state === 'in', 
+    isLive: isLive, // <--- Aquí usamos nuestra nueva lógica
     patriots: {
       score: getScore(patriots),
       logo: getLogo(patriots), 
