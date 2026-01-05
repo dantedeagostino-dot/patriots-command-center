@@ -5,10 +5,10 @@ import ScoreTrendChart from './ScoreTrendChart';
 import SeasonPerformanceChart from './SeasonPerformanceChart';
 
 // --- CONFIGURACIÓN ---
-const TEST_LIVE_MODE = false; // ⚠️ Mantenlo en false para ver datos reales
-const POLLING_INTERVAL = 15000; 
+const TEST_LIVE_MODE = false; // ⚠️ Poner en false para producción
+const POLLING_INTERVAL = 10000; // Intervalo de 10s para ver datos rápidos
 
-// --- MOCKS CON DATOS (Solo para modo prueba) ---
+// --- MOCKS CON DATOS ---
 const MOCK_PLAYS = [
     { time: "Q4 01:58", text: "Drake Maye pass deep right to Douglas for 25 yards TOUCHDOWN." },
     { time: "Q4 02:05", text: "Stevenson rush up the middle for 4 yards." },
@@ -276,13 +276,17 @@ function StandingsWidget({ standings }) {
 }
 
 function InjuryReportWidget({ injuries }) {
+  // 🛡️ CORRECCIÓN DE SEGURIDAD:
+  // Verificamos estrictamente que sea un array. Si es un objeto de error u otra cosa, usamos [].
   let list = [];
+  
   if (injuries?.injuries && Array.isArray(injuries.injuries)) {
       list = injuries.injuries;
   } else if (Array.isArray(injuries)) {
       list = injuries;
   }
 
+  // Si la lista está vacía, no renderizamos nada.
   if (list.length === 0) return null;
 
   return (
@@ -324,7 +328,10 @@ function InjuryReportWidget({ injuries }) {
 }
 
 function SeasonLeadersWidget({ leaders }) {
+  // 🛡️ CORRECCIÓN DE SEGURIDAD:
+  // Aseguramos que 'categories' sea siempre un array válido.
   let categories = [];
+  
   if (leaders?.leaders && Array.isArray(leaders.leaders)) {
       categories = leaders.leaders;
   } else if (Array.isArray(leaders)) {
@@ -365,7 +372,6 @@ function SeasonLeadersWidget({ leaders }) {
     </div>
   );
 }
-
 function PlayerModal({ player, onClose }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -488,6 +494,7 @@ function GameStatsModal({ game, stats, onClose }) {
   );
 }
 
+// --- LISTA DE JUGADORES (AQUÍ ESTÁ LA FUNCIÓN RESTAURADA) ---
 function RosterList({ players }) {
   const [search, setSearch] = useState("");
   const [selectedPlayer, setSelectedPlayer] = useState(null); 
@@ -565,28 +572,30 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
   const [selectedHistoryGame, setSelectedHistoryGame] = useState(null);
   const [historyGameStats, setHistoryGameStats] = useState(null);
 
+  // ✅ CORRECCIÓN DE ORDENAMIENTO Y CLAVES ÚNICAS (SOLUCIÓN DEFINITIVA)
   const seasonChartData = history ? [...history]
-      .sort((a, b) => new Date(a.dateRaw).getTime() - new Date(b.dateRaw).getTime()) 
+      .sort((a, b) => new Date(a.dateRaw).getTime() - new Date(b.dateRaw).getTime()) // 1. Ordenar por fecha (timestamp)
       .map((game, index) => {
           const patsScore = parseInt(game.patriots.score) || 0;
           const oppScore = parseInt(game.opponent.score) || 0;
           const diff = patsScore - oppScore;
+          
           return {
               date: game.dateString,
               opponent: game.opponent.name,
               oppCode: game.opponent.name.substring(0, 3).toUpperCase(),
+              // 2. Crear ID único para evitar que Recharts agrupe los "JET" repetidos
               uniqueId: `${game.opponent.name.substring(0, 3).toUpperCase()}_${index}`, 
               diff: diff,
               score: `${patsScore}-${oppScore}`
           };
       }) : [];
 
-  // Objeto base para mostrar (datos estáticos iniciales)
+  // Objeto base para mostrar (datos estáticos)
   const baseGame = nextGame; 
 
   // --- LÓGICA DE FUSIÓN DE DATOS ---
-  // Si estamos en modo test, usamos mocks.
-  // Si NO, verificamos si tenemos datos en vivo (liveScoreboard). Si sí, sobrescribimos los datos estáticos.
+  // Si tenemos datos en vivo (liveScoreboard), los usamos. Si no, usamos los estáticos (baseGame).
   const displayGame = TEST_LIVE_MODE && nextGame ? {
       ...nextGame, 
       isLive: true, 
@@ -596,7 +605,7 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
       yardLine: 68, possessionTeam: 'home', down: 2, distance: 5
   } : (liveScoreboard ? {
       ...baseGame,
-      isLive: true, // Forzamos visualmente a true si tenemos datos frescos
+      isLive: true, // Forzamos visualmente a true si tenemos datos
       status: liveScoreboard.status,
       patriots: { ...baseGame.patriots, score: liveScoreboard.patsScore },
       opponent: { ...baseGame.opponent, score: liveScoreboard.oppScore }
@@ -606,14 +615,18 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
     if (TEST_LIVE_MODE) {
         setLivePlays(MOCK_PLAYS); setLiveStats(MOCK_STATS); setLiveOdds(MOCK_ODDS); setChartData(MOCK_CHART_DATA); return;
     }
-    // IMPORTANTE: Quitamos la restricción !nextGame.isLive para que SIEMPRE busque actualizaciones si hay juego
+    // IMPORTANTE: Quitamos la condición !nextGame.isLive para que SIEMPRE busque datos si es el juego actual
     if (!nextGame) return;
 
     const fetchLiveData = async () => {
+      console.log("📡 Buscando datos en vivo para ID:", nextGame.id); // DEBUG LOG
       try {
         const res = await fetch(`/api/live?id=${nextGame.id}`);
-        const data = await res.json();
+        if (!res.ok) throw new Error("Error en fetch /api/live");
         
+        const data = await res.json();
+        console.log("📦 Datos recibidos:", data); // DEBUG LOG
+
         // 1. Actualizar jugadas
         if (data.plays) setLivePlays(data.plays.drives?.current?.plays || data.plays.plays || []);
         
@@ -623,25 +636,29 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
            setLiveOdds({ spread: provider.spread || "-", overUnder: provider.overUnder || "-", moneyline: provider.moneyline || "-" });
         }
 
-        // 3. --- LÓGICA CRÍTICA: ACTUALIZAR MARCADOR Y ESTADO ---
+        // 3. --- NUEVO: ACTUALIZAR MARCADOR Y ESTADO ---
         if (data.boxScore && data.boxScore.teams) {
             // Buscamos a los Patriots (ID 17) y al oponente
             const patsTeam = data.boxScore.teams.find(t => t.team.id === '17');
             const oppTeam = data.boxScore.teams.find(t => t.team.id !== '17');
             
-            // Buscamos el estado del reloj (Ej: "Q1 10:00")
+            // Buscamos el estado del reloj (Periodo y tiempo)
             let gameStatus = "Live";
             if (data.header?.competitions?.[0]?.status?.type?.detail) {
-                gameStatus = data.header.competitions[0].status.type.detail;
+                gameStatus = data.header.competitions[0].status.type.detail; // Ej: "Q1 10:00"
             } else if (data.boxScore?.status?.type?.detail) {
                 gameStatus = data.boxScore.status.type.detail;
             }
+
+            console.log("✅ Actualizando Scoreboard:", { pats: patsTeam?.score, opp: oppTeam?.score }); // DEBUG LOG
 
             setLiveScoreboard({
                 patsScore: patsTeam ? patsTeam.score : "0",
                 oppScore: oppTeam ? oppTeam.score : "0",
                 status: gameStatus
             });
+        } else {
+            console.warn("⚠️ No se encontraron datos de 'boxScore' en la respuesta."); // DEBUG LOG
         }
 
         setLiveStats({ passing: {name:"-", stat:"-"}, rushing: {name:"-", stat:"-"}, receiving: {name:"-", stat:"-"} }); 
@@ -688,7 +705,9 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
       <div className="min-h-[400px]">
         {activeTab === 'history' && (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+            {/* AQUÍ ESTÁ EL GRÁFICO CON DATOS CORREGIDOS */}
             <SeasonPerformanceChart data={seasonChartData} />
+
             <NewsSection news={news} />
             <div className="space-y-3">
               {history.length > 0 ? history.map(game => (
@@ -723,6 +742,7 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
           </div>
         )}
 
+        {/* --- PESTAÑAS NEXT, UPCOMING, ROSTER (Sin cambios) --- */}
         {activeTab === 'next' && (
           <div className="animate-in fade-in zoom-in duration-500">
              {displayGame ? (
