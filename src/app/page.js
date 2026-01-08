@@ -13,8 +13,9 @@ import DashboardTabs from '../components/DashboardTabs';
 export default async function Home() {
   // 1. OBTENCIÓN DE DATOS (PROTEGIDA)
   // Usamos .catch(err => null) en cada llamada para que si una falla, las demás sigan funcionando.
-  const [scheduleRaw, newsRaw, standingsRaw, playersRaw, leadersRaw, injuriesRaw] = await Promise.all([
-    getPatriotsSchedule().catch(() => null),
+  const [schedulePastRaw, scheduleFutureRaw, newsRaw, standingsRaw, playersRaw, leadersRaw, injuriesRaw] = await Promise.all([
+    getPatriotsSchedule('2024').catch(() => null), // Historial y Stats (Temporada completa)
+    getPatriotsSchedule('2026').catch(() => null), // Futuro (Planificación)
     getTeamNews().catch(() => null),
     getStandings().catch(() => null),
     getTeamPlayers().catch(() => null),
@@ -32,10 +33,22 @@ export default async function Home() {
   }
 
   // 2. Procesar Calendario
-  const { history, next, upcoming } = processSchedule(scheduleRaw);
+  // A. Historial (Usamos 2024 - Filtramos hasta Julio 2025 para evitar fugas de 2025/26)
+  const { history } = processSchedule(schedulePastRaw, '2025-07-01');
   const historyFormatted = history.map(game => getGameInfo(game)).filter(Boolean);
-  const nextGameFormatted = getGameInfo(next);
-  const upcomingFormatted = upcoming.map(game => getGameInfo(game)).filter(Boolean);
+
+  // B. Next & Upcoming
+  // Intentamos buscar "Next" en 2024 (Playoffs) pero con el mismo filtro
+  const { next: next24 } = processSchedule(schedulePastRaw, '2025-07-01');
+
+  // Upcoming viene puramente de 2026 (sin filtro o filtro futuro)
+  const { upcoming: upcoming26 } = processSchedule(scheduleFutureRaw);
+
+  // Si hay un juego "Siguiente" real en 2024 (Playoffs/SuperBowl), úsalo. Si no, null.
+  const nextGameFormatted = getGameInfo(next24);
+
+  // Upcoming viene puramente de 2026
+  const upcomingFormatted = upcoming26 ? upcoming26.map(game => getGameInfo(game)).filter(Boolean) : [];
 
   // 3. Procesar Noticias (AQUÍ ESTABA EL ERROR "b.map is not a function")
   let cleanNews = [];

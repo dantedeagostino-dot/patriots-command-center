@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import ScoreTrendChart from './ScoreTrendChart';
 import SeasonPerformanceChart from './SeasonPerformanceChart';
+import TeamStatsChart from './TeamStatsChart';
 
 // --- CONFIGURACIÓN ---
 const TEST_LIVE_MODE = false; // ⚠️ Poner en false para producción
@@ -557,7 +558,8 @@ function RosterList({ players }) {
 // --- COMPONENTE PRINCIPAL (ACTUALIZADO) ---
 
 export default function DashboardTabs({ history, nextGame, upcoming, news, players, debugData, leaders, injuries, standings }) {
-  const [activeTab, setActiveTab] = useState('next');
+  // Si no hay juego siguiente, mostramos el historial o stats por defecto
+  const [activeTab, setActiveTab] = useState(nextGame ? 'next' : 'history');
   
   // ESTADOS
   const [livePlays, setLivePlays] = useState([]);
@@ -567,6 +569,10 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
   
   // ✅ ESTADO PARA EL MARCADOR EN TIEMPO REAL
   const [liveScoreboard, setLiveScoreboard] = useState(null); 
+
+  // NUEVO: ESTADOS PARA OPTIMIZACIÓN Y CONTROL MANUAL
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Historial
   const [selectedHistoryGame, setSelectedHistoryGame] = useState(null);
@@ -611,21 +617,18 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
       opponent: { ...baseGame.opponent, score: liveScoreboard.oppScore }
   } : baseGame);
 
-  useEffect(() => {
-    if (TEST_LIVE_MODE) {
-        setLivePlays(MOCK_PLAYS); setLiveStats(MOCK_STATS); setLiveOdds(MOCK_ODDS); setChartData(MOCK_CHART_DATA); return;
-    }
-    // IMPORTANTE: Quitamos la condición !nextGame.isLive para que SIEMPRE busque datos si es el juego actual
-    if (!nextGame) return;
 
-    const fetchLiveData = async () => {
-      console.log("📡 Buscando datos en vivo para ID:", nextGame.id); // DEBUG LOG
+  // FUNCION DE FETCH MANUAL Y AUTOMATICA
+  const fetchLiveData = async () => {
+      if (!nextGame || TEST_LIVE_MODE) return;
+
+      setIsRefreshing(true);
+      console.log("📡 Buscando datos en vivo para ID:", nextGame.id);
       try {
         const res = await fetch(`/api/live?id=${nextGame.id}`);
         if (!res.ok) throw new Error("Error en fetch /api/live");
         
         const data = await res.json();
-        console.log("📦 Datos recibidos:", data); // DEBUG LOG
 
         // 1. Actualizar jugadas
         if (data.plays) setLivePlays(data.plays.drives?.current?.plays || data.plays.plays || []);
@@ -636,39 +639,53 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
            setLiveOdds({ spread: provider.spread || "-", overUnder: provider.overUnder || "-", moneyline: provider.moneyline || "-" });
         }
 
-        // 3. --- NUEVO: ACTUALIZAR MARCADOR Y ESTADO ---
+        // 3. ACTUALIZAR MARCADOR Y ESTADO
         if (data.boxScore && data.boxScore.teams) {
-            // Buscamos a los Patriots (ID 17) y al oponente
             const patsTeam = data.boxScore.teams.find(t => t.team.id === '17');
             const oppTeam = data.boxScore.teams.find(t => t.team.id !== '17');
             
-            // Buscamos el estado del reloj (Periodo y tiempo)
             let gameStatus = "Live";
             if (data.header?.competitions?.[0]?.status?.type?.detail) {
-                gameStatus = data.header.competitions[0].status.type.detail; // Ej: "Q1 10:00"
+                gameStatus = data.header.competitions[0].status.type.detail;
             } else if (data.boxScore?.status?.type?.detail) {
                 gameStatus = data.boxScore.status.type.detail;
             }
 
-            console.log("✅ Actualizando Scoreboard:", { pats: patsTeam?.score, opp: oppTeam?.score }); // DEBUG LOG
-
+            // CORRECCIÓN LIVE MODE: Solo actualizamos si realmente hay datos relevantes
             setLiveScoreboard({
                 patsScore: patsTeam ? patsTeam.score : "0",
                 oppScore: oppTeam ? oppTeam.score : "0",
                 status: gameStatus
             });
-        } else {
-            console.warn("⚠️ No se encontraron datos de 'boxScore' en la respuesta."); // DEBUG LOG
         }
 
         setLiveStats({ passing: {name:"-", stat:"-"}, rushing: {name:"-", stat:"-"}, receiving: {name:"-", stat:"-"} }); 
       } catch (e) { console.error("Error fetching live data", e); }
-    };
+      setIsRefreshing(false);
+  };
 
-    fetchLiveData();
-    const interval = setInterval(fetchLiveData, POLLING_INTERVAL);
+  useEffect(() => {
+    if (TEST_LIVE_MODE) {
+        setLivePlays(MOCK_PLAYS); setLiveStats(MOCK_STATS); setLiveOdds(MOCK_ODDS); setChartData(MOCK_CHART_DATA); return;
+    }
+
+    // Si el juego está en vivo, activamos auto-refresh por defecto (si el usuario no lo ha apagado explícitamente)
+    // Pero aquí solo configuramos el intervalo
+
+    if (!nextGame) return;
+
+    let interval = null;
+    if (autoRefresh || (nextGame.isLive && autoRefresh !== false)) {
+        interval = setInterval(fetchLiveData, POLLING_INTERVAL);
+    }
+
+    // Hacemos un fetch inicial si está en vivo
+    if (nextGame.isLive) {
+        fetchLiveData();
+    }
+
     return () => clearInterval(interval);
-  }, [nextGame]);
+  }, [nextGame, autoRefresh]);
 
   const handleHistoryClick = async (game) => {
       setSelectedHistoryGame(game);
@@ -689,24 +706,50 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
           />
       )}
 
+      {/* CONTROLES DE ACTUALIZACIÓN (OPTIMIZACIÓN) */}
+      <div className="flex justify-end mb-2 items-center gap-3">
+         <div className="flex items-center gap-2">
+            <span className="text-[10px] uppercase text-gray-500 font-bold">Auto-Update</span>
+            <button
+                onClick={() => setAutoRefresh(!autoRefresh)}
+                className={`w-8 h-4 rounded-full p-0.5 transition-colors ${autoRefresh ? 'bg-green-500' : 'bg-slate-700'}`}
+            >
+                <div className={`w-3 h-3 bg-white rounded-full shadow-md transform transition-transform ${autoRefresh ? 'translate-x-4' : 'translate-x-0'}`}></div>
+            </button>
+         </div>
+         <button
+            onClick={fetchLiveData}
+            disabled={isRefreshing}
+            className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white px-3 py-1 rounded text-xs font-bold transition border border-slate-700"
+         >
+            {isRefreshing ? <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div> : '↻'}
+            Refresh
+         </button>
+      </div>
+
       <div className="flex border-b border-slate-700 mb-6 bg-slate-900/50 rounded-t-xl overflow-hidden overflow-x-auto">
-        {['history', 'next', 'upcoming', 'roster'].map((tab) => (
+        {['history', 'stats', 'next', 'upcoming', 'roster'].map((tab) => (
           <button 
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`flex-1 min-w-[100px] py-4 text-xs md:text-sm font-bold tracking-wider uppercase transition-colors whitespace-nowrap
               ${activeTab === tab ? 'bg-slate-800 text-blue-400 border-b-2 border-blue-400' : 'text-gray-500 hover:text-white hover:bg-slate-800'}`}
           >
-            {tab === 'history' ? 'History' : tab === 'roster' ? 'Team Roster' : tab === 'upcoming' ? 'Upcoming' : tab}
+            {tab === 'history' ? 'History' : tab === 'roster' ? 'Roster' : tab === 'upcoming' ? 'Upcoming' : tab === 'stats' ? 'Stats' : tab}
           </button>
         ))}
       </div>
 
       <div className="min-h-[400px]">
+        {activeTab === 'stats' && (
+           <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 space-y-6">
+              <TeamStatsChart data={seasonChartData} />
+              <SeasonPerformanceChart data={seasonChartData} />
+           </div>
+        )}
+
         {activeTab === 'history' && (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-            {/* AQUÍ ESTÁ EL GRÁFICO CON DATOS CORREGIDOS */}
-            <SeasonPerformanceChart data={seasonChartData} />
 
             <NewsSection news={news} />
             <div className="space-y-3">

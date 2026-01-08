@@ -54,13 +54,14 @@ const OFFICIAL_LOGOS = {
   '26': "https://upload.wikimedia.org/wikipedia/en/thumb/8/8e/Seattle_Seahawks_logo.svg/1200px-Seattle_Seahawks_logo.svg.png"      // Seahawks
 };
 
-export function processSchedule(scheduleData) {
+export function processSchedule(scheduleData, cutoffDateStr = null) {
   if (!scheduleData || !scheduleData.events) {
     return { history: [], next: null, upcoming: [] };
   }
 
   const events = scheduleData.events;
-  const now = new Date(); // Hora actual exacta
+  const now = new Date();
+  const cutoffDate = cutoffDateStr ? new Date(cutoffDateStr) : null;
 
   // 1. Asegurar que las fechas sean objetos Date válidos y ordenar
   events.sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -71,6 +72,11 @@ export function processSchedule(scheduleData) {
 
   for (const game of events) {
     const gameDate = new Date(game.date);
+
+    // FILTRO DE FECHA (Para evitar que juegos de 2026 aparezcan en la llamada de 2024)
+    if (cutoffDate && gameDate > cutoffDate) {
+        continue;
+    }
     const statusType = game.status?.type;
     
     // 1. Si ya está marcado como completado, es historia sin dudas.
