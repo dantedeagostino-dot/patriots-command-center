@@ -14,7 +14,7 @@ export default async function Home() {
   // 1. OBTENCIÓN DE DATOS (PROTEGIDA)
   // Usamos .catch(err => null) en cada llamada para que si una falla, las demás sigan funcionando.
   const [schedulePastRaw, scheduleFutureRaw, newsRaw, standingsRaw, playersRaw, leadersRaw, injuriesRaw] = await Promise.all([
-    getPatriotsSchedule('2024').catch(() => null), // Historial y Stats (Temporada completa)
+    getPatriotsSchedule('2025').catch(() => null), // Historial y Stats (Temporada completa)
     getPatriotsSchedule('2026').catch(() => null), // Futuro (Planificación)
     getTeamNews().catch(() => null),
     getStandings().catch(() => null),
@@ -34,12 +34,12 @@ export default async function Home() {
 
   // 2. Procesar Calendario
   // A. Historial (Usamos 2024 - Filtramos hasta Julio 2025 para evitar fugas de 2025/26)
-  const { history } = processSchedule(schedulePastRaw, '2025-07-01');
+  const { history } = processSchedule(schedulePastRaw, '2026-07-01');
   const historyFormatted = history.map(game => getGameInfo(game)).filter(Boolean);
 
   // B. Next & Upcoming
   // Intentamos buscar "Next" en 2024 (Playoffs) pero con el mismo filtro
-  const { next: next24 } = processSchedule(schedulePastRaw, '2025-07-01');
+  const { next: next24 } = processSchedule(schedulePastRaw, '2026-07-01');
 
   // Upcoming viene puramente de 2026 (sin filtro o filtro futuro)
   const { upcoming: upcoming26 } = processSchedule(scheduleFutureRaw);
@@ -69,7 +69,8 @@ export default async function Home() {
          title: item.headline || item.title || "Patriots News",
          link: item.links?.web?.href || item.link || "https://www.patriots.com/news/",
          pubDate: item.published || item.date || new Date().toISOString(),
-         source: item.source || "NFL News"
+         source: item.source || "NFL News",
+         image: item.images?.[0]?.url || item.image || null
       }));
   }
 

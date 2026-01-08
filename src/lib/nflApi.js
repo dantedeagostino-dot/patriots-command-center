@@ -30,7 +30,7 @@ export async function fetchFromNFL(endpoint, params = '') {
 }
 
 // 1. CALENDARIO
-export async function getPatriotsSchedule(season = '2024') {
+export async function getPatriotsSchedule(season = '2025') {
   return await fetchFromNFL('nfl-schedule-team', `teamId=${PATRIOTS_ID}&season=${season}`);
 }
 
@@ -41,7 +41,7 @@ export async function getTeamNews() {
 
 // 3. POSICIONES
 export async function getStandings() {
-  return await fetchFromNFL('nflstandings', 'year=2024');
+  return await fetchFromNFL('nflstandings', 'year=2025');
 }
 
 // 4. JUGADORES
