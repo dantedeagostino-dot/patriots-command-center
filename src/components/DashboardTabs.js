@@ -558,7 +558,8 @@ function RosterList({ players }) {
 // --- COMPONENTE PRINCIPAL (ACTUALIZADO) ---
 
 export default function DashboardTabs({ history, nextGame, upcoming, news, players, debugData, leaders, injuries, standings }) {
-  const [activeTab, setActiveTab] = useState('next');
+  // Si no hay juego siguiente, mostramos el historial o stats por defecto
+  const [activeTab, setActiveTab] = useState(nextGame ? 'next' : 'history');
   
   // ESTADOS
   const [livePlays, setLivePlays] = useState([]);

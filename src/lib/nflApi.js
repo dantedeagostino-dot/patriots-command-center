@@ -30,8 +30,8 @@ export async function fetchFromNFL(endpoint, params = '') {
 }
 
 // 1. CALENDARIO
-export async function getPatriotsSchedule() {
-  return await fetchFromNFL('nfl-schedule-team', `teamId=${PATRIOTS_ID}&season=2026`);
+export async function getPatriotsSchedule(season = '2024') {
+  return await fetchFromNFL('nfl-schedule-team', `teamId=${PATRIOTS_ID}&season=${season}`);
 }
 
 // 2. NOTICIAS
@@ -41,7 +41,7 @@ export async function getTeamNews() {
 
 // 3. POSICIONES
 export async function getStandings() {
-  return await fetchFromNFL('nflstandings', 'year=2025');
+  return await fetchFromNFL('nflstandings', 'year=2024');
 }
 
 // 4. JUGADORES
@@ -58,7 +58,7 @@ export async function getPlayerStats(playerId) {
 
 // 5. NUEVOS DATOS TÁCTICOS (Faltaban estos)
 export async function getTeamLeaders() {
-  return await fetchFromNFL('team/leaders', `teamId=${PATRIOTS_ID}&season=2025&limit=3`);
+  return await fetchFromNFL('team/leaders', `teamId=${PATRIOTS_ID}&season=2024&limit=3`);
 }
 
 export async function getTeamInjuries() {
