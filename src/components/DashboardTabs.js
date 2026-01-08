@@ -648,7 +648,6 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
       if (!nextGame || TEST_LIVE_MODE) return;
 
       setIsRefreshing(true);
-      console.log("📡 Buscando datos en vivo para ID:", nextGame.id);
       try {
         const res = await fetch(`/api/live?id=${nextGame.id}`);
         if (!res.ok) throw new Error("Error en fetch /api/live");
