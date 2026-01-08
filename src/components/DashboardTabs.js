@@ -197,9 +197,19 @@ function NewsSection({ news }) {
       <h3 className="text-blue-400 text-xs font-bold uppercase tracking-wider mb-4 border-l-4 border-blue-500 pl-3">Latest Team News</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {news.slice(0, 4).map((item, i) => (
-           <a key={i} href={item.link} target="_blank" className="bg-slate-800 p-4 rounded hover:bg-slate-700 transition border border-slate-700 group">
-              <h4 className="font-bold text-sm text-gray-200 group-hover:text-blue-300 line-clamp-2">{String(item.title)}</h4>
-              <p className="text-xs text-gray-500 mt-2">{String(item.source || "NFL News")}</p>
+           <a key={i} href={item.link} target="_blank" className="bg-slate-800 rounded hover:bg-slate-700 transition border border-slate-700 group overflow-hidden">
+              {item.image && (
+                <img
+                  src={item.image}
+                  alt={item.title}
+                  className="h-32 w-full object-cover rounded-t opacity-80 group-hover:opacity-100 transition"
+                  onError={(e) => e.target.style.display = 'none'}
+                />
+              )}
+              <div className="p-4">
+                <h4 className="font-bold text-sm text-gray-200 group-hover:text-blue-300 line-clamp-2">{String(item.title)}</h4>
+                <p className="text-xs text-gray-500 mt-2">{String(item.source || "NFL News")}</p>
+              </div>
            </a>
         ))}
       </div>
@@ -593,7 +603,22 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
               // 2. Crear ID único para evitar que Recharts agrupe los "JET" repetidos
               uniqueId: `${game.opponent.name.substring(0, 3).toUpperCase()}_${index}`, 
               diff: diff,
-              score: `${patsScore}-${oppScore}`
+              score: `${patsScore}-${oppScore}`,
+              patsScore: patsScore,
+              oppScore: oppScore,
+              // MOCKS for tactical stats evolution (Pats vs Opp)
+              patsTotalYards: Math.floor(Math.random() * (450 - 250 + 1) + 250),
+              oppTotalYards: Math.floor(Math.random() * (450 - 250 + 1) + 250),
+              patsPassingYards: Math.floor(Math.random() * (350 - 150 + 1) + 150),
+              oppPassingYards: Math.floor(Math.random() * (350 - 150 + 1) + 150),
+              patsRushingYards: Math.floor(Math.random() * (200 - 50 + 1) + 50),
+              oppRushingYards: Math.floor(Math.random() * (200 - 50 + 1) + 50),
+              patsFirstDowns: Math.floor(Math.random() * (28 - 15 + 1) + 15),
+              oppFirstDowns: Math.floor(Math.random() * (28 - 15 + 1) + 15),
+              patsTurnovers: Math.floor(Math.random() * 4),
+              oppTurnovers: Math.floor(Math.random() * 4),
+              patsPossession: Math.floor(Math.random() * (35 - 25 + 1) + 25),
+              oppPossession: Math.floor(Math.random() * (35 - 25 + 1) + 25)
           };
       }) : [];
 
