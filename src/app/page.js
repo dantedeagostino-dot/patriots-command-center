@@ -33,12 +33,15 @@ export default async function Home() {
   }
 
   // 2. Procesar Calendario
-  // A. Historial (Usamos 2024)
-  const { history } = processSchedule(schedulePastRaw);
+  // A. Historial (Usamos 2024 - Filtramos hasta Julio 2025 para evitar fugas de 2025/26)
+  const { history } = processSchedule(schedulePastRaw, '2025-07-01');
   const historyFormatted = history.map(game => getGameInfo(game)).filter(Boolean);
 
-  // B. Next & Upcoming (Intentamos buscar en 2024 por si hay playoffs, sino 2026)
-  const { next: next24 } = processSchedule(schedulePastRaw);
+  // B. Next & Upcoming
+  // Intentamos buscar "Next" en 2024 (Playoffs) pero con el mismo filtro
+  const { next: next24 } = processSchedule(schedulePastRaw, '2025-07-01');
+
+  // Upcoming viene puramente de 2026 (sin filtro o filtro futuro)
   const { upcoming: upcoming26 } = processSchedule(scheduleFutureRaw);
 
   // Si hay un juego "Siguiente" real en 2024 (Playoffs/SuperBowl), úsalo. Si no, null.
