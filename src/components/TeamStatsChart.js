@@ -13,7 +13,7 @@ export default function TeamStatsChart({ data }) {
   );
 
   const metrics = [
-    { key: 'score', label: 'Points', colorPats: '#3b82f6', colorOpp: '#94a3b8' },
+    { key: 'score', label: 'Score', colorPats: '#3b82f6', colorOpp: '#94a3b8' },
     { key: 'totalYards', label: 'Total Yards', colorPats: '#3b82f6', colorOpp: '#94a3b8' }, // Blue vs Slate
     { key: 'turnovers', label: 'Turnovers', colorPats: '#3b82f6', colorOpp: '#94a3b8' },
   ];

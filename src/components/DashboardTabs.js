@@ -610,10 +610,10 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
               oppScore: oppScore,
 
               // MOCKS for tactical stats evolution (Pats vs Opp)
-              patsTotalYards: Math.floor(Math.random() * (450 - 250 + 1) + 250),
-              oppTotalYards: Math.floor(Math.random() * (450 - 250 + 1) + 250),
-              patsTurnovers: Math.floor(Math.random() * 4),
-              oppTurnovers: Math.floor(Math.random() * 4),
+              patsTotalYards: game.patriots?.totalYards || Math.floor(Math.random() * (450 - 250 + 1) + 250),
+              oppTotalYards: game.opponent?.totalYards || Math.floor(Math.random() * (450 - 250 + 1) + 250),
+              patsTurnovers: game.patriots?.turnovers !== undefined ? game.patriots.turnovers : Math.floor(Math.random() * 4),
+              oppTurnovers: game.opponent?.turnovers !== undefined ? game.opponent.turnovers : Math.floor(Math.random() * 4),
 
               // Extra mocks
               patsPassingYards: Math.floor(Math.random() * (350 - 150 + 1) + 150),
@@ -807,16 +807,16 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
                         </span>
                     </div>
 
-                    <div className="flex items-center gap-6">
-                        <img src={game.opponent.logo} className="w-8 h-8 object-contain opacity-80" alt="Opp" />
+                    <div className="flex items-center justify-center gap-6 flex-1">
+                        <img src={game.patriots.logo} className="w-10 h-10 object-contain" alt="Pats" />
 
-                        <div className="flex flex-col items-center min-w-[60px]">
-                            <span className="text-2xl font-black text-white font-mono tracking-tighter leading-none">
-                                {patsScore}-{oppScore}
+                        <div className="flex items-center justify-center bg-black/50 px-4 py-2 rounded border border-slate-800">
+                            <span className="text-2xl font-black text-white font-mono tracking-widest leading-none">
+                                {patsScore} - {oppScore}
                             </span>
                         </div>
 
-                        <img src={game.patriots.logo} className="w-8 h-8 object-contain" alt="Pats" />
+                        <img src={game.opponent.logo} className="w-10 h-10 object-contain" alt="Opp" />
                     </div>
 
                     <div className="w-24 text-right hidden md:block">
