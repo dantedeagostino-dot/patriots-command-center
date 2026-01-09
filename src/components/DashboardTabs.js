@@ -589,7 +589,7 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
   const [historyGameStats, setHistoryGameStats] = useState(null);
 
   // ✅ CORRECCIÓN DE ORDENAMIENTO Y CLAVES ÚNICAS (SOLUCIÓN DEFINITIVA)
-  const seasonChartData = history ? [...history]
+  const seasonChartData = history && history.length > 0 ? [...history]
       .sort((a, b) => new Date(a.dateRaw).getTime() - new Date(b.dateRaw).getTime()) // 1. Ordenar por fecha (timestamp)
       .map((game, index) => {
           const patsScore = parseInt(game.patriots.score) || 0;
@@ -599,24 +599,29 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
           return {
               date: game.dateString,
               opponent: game.opponent.name,
-              oppCode: game.opponent.name.substring(0, 3).toUpperCase(),
+              oppCode: game.opponent.name ? game.opponent.name.substring(0, 3).toUpperCase() : 'OPP',
               // 2. Crear ID único para evitar que Recharts agrupe los "JET" repetidos
-              uniqueId: `${game.opponent.name.substring(0, 3).toUpperCase()}_${index}`, 
+              uniqueId: `${game.opponent.name ? game.opponent.name.substring(0, 3).toUpperCase() : 'OPP'}_${index}`,
               diff: diff,
               score: `${patsScore}-${oppScore}`,
+
+              // Comparatives
               patsScore: patsScore,
               oppScore: oppScore,
+
               // MOCKS for tactical stats evolution (Pats vs Opp)
               patsTotalYards: Math.floor(Math.random() * (450 - 250 + 1) + 250),
               oppTotalYards: Math.floor(Math.random() * (450 - 250 + 1) + 250),
+              patsTurnovers: Math.floor(Math.random() * 4),
+              oppTurnovers: Math.floor(Math.random() * 4),
+
+              // Extra mocks
               patsPassingYards: Math.floor(Math.random() * (350 - 150 + 1) + 150),
               oppPassingYards: Math.floor(Math.random() * (350 - 150 + 1) + 150),
               patsRushingYards: Math.floor(Math.random() * (200 - 50 + 1) + 50),
               oppRushingYards: Math.floor(Math.random() * (200 - 50 + 1) + 50),
               patsFirstDowns: Math.floor(Math.random() * (28 - 15 + 1) + 15),
               oppFirstDowns: Math.floor(Math.random() * (28 - 15 + 1) + 15),
-              patsTurnovers: Math.floor(Math.random() * 4),
-              oppTurnovers: Math.floor(Math.random() * 4),
               patsPossession: Math.floor(Math.random() * (35 - 25 + 1) + 25),
               oppPossession: Math.floor(Math.random() * (35 - 25 + 1) + 25)
           };
@@ -776,36 +781,51 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
 
             <NewsSection news={news} />
-            <div className="space-y-3">
-              {history.length > 0 ? history.map(game => (
+
+            <div className="flex items-center gap-4 mb-4 mt-8">
+               <div className="h-px bg-slate-700 flex-1"></div>
+               <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Season Results</h2>
+               <div className="h-px bg-slate-700 flex-1"></div>
+            </div>
+
+            <div className="space-y-2">
+              {history.length > 0 ? history.map(game => {
+                 const patsScore = parseInt(game.patriots.score) || 0;
+                 const oppScore = parseInt(game.opponent.score) || 0;
+                 const isWin = patsScore > oppScore;
+
+                 return (
                  <button 
                     key={game.id} 
                     onClick={() => handleHistoryClick(game)}
-                    className="w-full flex items-center justify-between bg-slate-800 p-4 rounded-lg border border-slate-700 hover:bg-slate-700 hover:border-blue-500 transition group text-left"
+                    className="w-full flex items-center justify-between bg-slate-900/40 hover:bg-slate-800 p-3 rounded border border-slate-700 hover:border-blue-500 transition group"
                  >
-                    <div className="flex flex-col w-20">
-                        <span className="text-gray-400 text-xs font-bold">{game.dateString}</span>
-                        <span className={`text-[10px] uppercase font-bold mt-1 ${parseInt(game.patriots.score) > parseInt(game.opponent.score) ? 'text-green-400' : 'text-red-400'}`}>
-                          {game.status}
+                    <div className="flex flex-col items-start w-24">
+                        <span className="text-gray-400 text-xs font-bold font-mono">{game.dateString}</span>
+                        <span className={`text-[10px] font-black uppercase tracking-wider ${isWin ? 'text-green-500' : 'text-red-500'}`}>
+                          {isWin ? 'WIN' : 'LOSS'}
                         </span>
                     </div>
-                    <div className="flex items-center justify-center gap-3 flex-1 mx-2">
-                        <div className="flex items-center gap-2 justify-end min-w-[80px] md:min-w-[120px]">
-                            <span className="text-gray-400 text-[10px] md:text-xs font-bold uppercase hidden md:block truncate">{game.opponent.name}</span>
-                            <img src={game.opponent.logo} className="w-8 h-8 object-contain" alt="Opp" />
+
+                    <div className="flex items-center gap-6">
+                        <img src={game.opponent.logo} className="w-8 h-8 object-contain opacity-80" alt="Opp" />
+
+                        <div className="flex flex-col items-center min-w-[60px]">
+                            <span className="text-2xl font-black text-white font-mono tracking-tighter leading-none">
+                                {patsScore}-{oppScore}
+                            </span>
                         </div>
-                        <div className="font-mono font-black text-white text-sm bg-slate-950/50 px-2 py-1 rounded whitespace-nowrap border border-slate-700/50">
-                            {game.opponent.score} - {game.patriots.score}
-                        </div>
-                        <div className="flex items-center gap-2 justify-start min-w-[80px] md:min-w-[120px]">
-                            <img src={game.patriots.logo} className="w-8 h-8 object-contain" alt="Pats" />
-                            <span className="text-blue-400 text-[10px] md:text-xs font-bold uppercase hidden md:block truncate">{game.patriots.name}</span>
-                        </div>
+
+                        <img src={game.patriots.logo} className="w-8 h-8 object-contain" alt="Pats" />
+                    </div>
+
+                    <div className="w-24 text-right hidden md:block">
+                        <span className="text-[10px] font-bold text-gray-600 group-hover:text-blue-400 transition uppercase tracking-wider">View Details</span>
                     </div>
                  </button>
-              )) : <div className="text-center p-10 text-gray-500">No games completed yet.</div>}
+                 );
+              }) : <div className="text-center p-10 text-gray-500">No games completed yet.</div>}
             </div>
-            <p className="text-center text-[10px] text-gray-600 mt-4 uppercase tracking-widest">Click on any game to view detailed stats</p>
           </div>
         )}
 

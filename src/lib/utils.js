@@ -27,7 +27,7 @@ const OFFICIAL_LOGOS = {
   '7':  "https://upload.wikimedia.org/wikipedia/en/thumb/4/44/Denver_Broncos_logo.svg/1200px-Denver_Broncos_logo.svg.png",       // Broncos
   '12': "https://upload.wikimedia.org/wikipedia/en/thumb/e/e1/Kansas_City_Chiefs_logo.svg/1200px-Kansas_City_Chiefs_logo.svg.png", // Chiefs
   '13': "https://upload.wikimedia.org/wikipedia/en/thumb/4/48/Las_Vegas_Raiders_logo.svg/1200px-Las_Vegas_Raiders_logo.svg.png",   // Raiders
-  '24': "https://upload.wikimedia.org/wikipedia/en/thumb/a/a6/Los_Angeles_Chargers_logo.svg/1200px-Los_Angeles_Chargers_logo.svg.png", // Chargers
+  '24': "https://a.espncdn.com/i/teamlogos/nfl/500/lac.png", // Chargers
 
   // NFC East
   '6':  "https://upload.wikimedia.org/wikipedia/en/thumb/1/15/Dallas_Cowboys_logo.svg/1200px-Dallas_Cowboys_logo.svg.png",       // Cowboys
