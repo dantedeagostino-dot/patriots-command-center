@@ -4,7 +4,7 @@ const options = {
   method: 'GET',
   headers: {
     'x-rapidapi-key': process.env.RAPIDAPI_KEY,
-    'x-rapidapi-host': process.env.RAPIDAPI_HOST
+    'x-rapidapi-host': 'nfl-api1.p.rapidapi.com'
   }
 };
 
@@ -18,7 +18,8 @@ export async function fetchFromNFL(endpoint, params = '') {
     const response = await fetch(url, { ...options, next: { revalidate: 10 } });
     
     if (!response.ok) {
-      console.error(`Error API ${endpoint}: ${response.status}`);
+      const errorText = await response.text();
+      console.error(`Error API ${endpoint}: ${response.status}`, errorText);
       return null;
     }
     
