@@ -757,14 +757,14 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
       </div>
 
       <div className="flex border-b border-slate-700 mb-6 bg-slate-900/50 rounded-t-xl overflow-hidden overflow-x-auto">
-        {['history', 'stats', 'next', 'upcoming', 'roster'].map((tab) => (
+        {['history', 'stats', 'next', 'roster'].map((tab) => (
           <button 
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`flex-1 min-w-[100px] py-4 text-xs md:text-sm font-bold tracking-wider uppercase transition-colors whitespace-nowrap
               ${activeTab === tab ? 'bg-slate-800 text-blue-400 border-b-2 border-blue-400' : 'text-gray-500 hover:text-white hover:bg-slate-800'}`}
           >
-            {tab === 'history' ? 'History' : tab === 'roster' ? 'Roster' : tab === 'upcoming' ? 'Upcoming' : tab === 'stats' ? 'Stats' : tab}
+            {tab === 'history' ? 'History' : tab === 'roster' ? 'Roster' : tab === 'stats' ? 'Stats' : tab}
           </button>
         ))}
       </div>
@@ -909,47 +909,6 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
 
                </div>
              ) : <div className="text-center p-10 text-gray-500">No scheduled game found.</div>}
-          </div>
-        )}
-
-        {activeTab === 'upcoming' && (
-          <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 relative">
-             <div className="text-center mb-8 relative p-6 bg-slate-900/40 rounded-2xl border border-slate-800 overflow-hidden group">
-                <div className="absolute top-0 left-[-100%] w-full h-full bg-gradient-to-r from-transparent via-blue-500/10 to-transparent skew-x-12 animate-[shimmer_3s_infinite]"></div>
-                <h3 className="text-3xl font-black text-white italic tracking-tighter drop-shadow-lg">
-                  <span className="text-blue-500">2026</span> SEASON
-                </h3>
-                <p className="text-gray-400 text-[10px] font-bold tracking-[0.3em] uppercase mt-2">
-                  CLASSIFIED: UPCOMING SCHEDULE
-                </p>
-             </div>
-
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-               {upcoming && upcoming.length > 0 ? upcoming.map(game => (
-                 <div key={game.id} className="bg-slate-800 p-4 rounded-lg border border-slate-700 flex items-center gap-4 hover:bg-slate-750 transition hover:border-blue-500/50">
-                    <div className="text-center w-14 bg-slate-900 rounded p-2 border border-slate-800">
-                       <span className="block text-sm font-bold text-blue-400">{game.dateString.split(' ')[0]}</span>
-                       <span className="block text-[10px] text-gray-400 uppercase">{game.dateString.split(' ')[1]}</span>
-                    </div>
-                    <div className="flex-1">
-                       <div className="flex items-center gap-2 mb-1">
-                          <span className="text-gray-500 text-[10px] font-bold">VS</span>
-                          <span className="font-bold text-white">{String(game.opponent.name)}</span>
-                       </div>
-                       <p className="text-[10px] text-gray-500 uppercase tracking-wider">{game.venue}</p>
-                    </div>
-                    <img src={game.opponent.logo} className="w-10 h-10 object-contain opacity-80" alt="Logo" />
-                 </div>
-               )) : (
-                 <div className="col-span-2 text-center py-12 bg-slate-900/50 rounded-xl border border-dashed border-slate-700">
-                    <div className="inline-block p-3 rounded-full bg-slate-800 mb-3">
-                      <span className="text-2xl">📡</span>
-                    </div>
-                    <p className="text-gray-300 font-bold text-sm">No upcoming games detected.</p>
-                    <p className="text-gray-500 text-xs mt-1">System is scanning for 2026 schedule updates...</p>
-                 </div>
-               )}
-             </div>
           </div>
         )}
 
