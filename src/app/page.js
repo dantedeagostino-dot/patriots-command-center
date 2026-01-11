@@ -12,8 +12,8 @@ import DashboardTabs from '../components/DashboardTabs';
 
 export default async function Home() {
   const [schedulePastRaw, scheduleFutureRaw, newsRaw, standingsRaw, playersRaw, leadersRaw, injuriesRaw] = await Promise.all([
-    getPatriotsSchedule('2024').catch(() => null),
     getPatriotsSchedule('2025').catch(() => null),
+    getPatriotsSchedule('2026').catch(() => null),
     getTeamNews().catch(() => null),
     getStandings().catch(() => null),
     getTeamPlayers().catch(() => null),
@@ -28,16 +28,20 @@ export default async function Home() {
       } catch (e) { console.error(e); }
   }
 
-  const { history } = processSchedule(schedulePastRaw, '2025-07-01');
+  const { history, upcoming: upcoming25 } = processSchedule(schedulePastRaw, '2026-07-01');
   const historyFormatted = history.map(game => getGameInfo(game)).filter(Boolean);
 
-  const { next: next24 } = processSchedule(schedulePastRaw, '2025-07-01');
+  const { next: next25 } = processSchedule(schedulePastRaw, '2026-07-01');
 
   const { upcoming: upcomingNextSeason } = processSchedule(scheduleFutureRaw);
 
-  const nextGameFormatted = getGameInfo(next24);
+  const nextGameFormatted = getGameInfo(next25);
 
-  const upcomingFormatted = upcomingNextSeason ? upcomingNextSeason.map(game => getGameInfo(game)).filter(Boolean) : [];
+  const upcoming25Formatted = upcoming25 ? upcoming25.map(game => getGameInfo(game)).filter(Boolean) : [];
+  const upcomingNextSeasonFormatted = upcomingNextSeason ? upcomingNextSeason.map(game => getGameInfo(game)).filter(Boolean) : [];
+
+  // Merge upcoming games from 2025 (current season future) and 2026 (next season)
+  const upcomingFormatted = [...upcoming25Formatted, ...upcomingNextSeasonFormatted];
 
   let cleanNews = [];
   let rawList = [];
