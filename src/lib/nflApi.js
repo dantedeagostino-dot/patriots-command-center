@@ -39,8 +39,16 @@ export async function fetchFromNFL(endpoint, params = '') {
   }
 }
 
-export async function getPatriotsSchedule(season = '2025') {
-  return await fetchFromNFL('nfl-schedule-team', `teamId=${PATRIOTS_ID}&season=${season}`);
+// Helper to get the current season year (handles post-season in Jan/Feb)
+function getCurrentSeasonYear() {
+  const now = new Date();
+  // If month is Jan (0) or Feb (1), we are in the playoffs of the previous year
+  return now.getMonth() < 2 ? now.getFullYear() - 1 : now.getFullYear();
+}
+
+export async function getPatriotsSchedule(season) {
+  const seasonYear = season || getCurrentSeasonYear();
+  return await fetchFromNFL('nfl-schedule-team', `teamId=${PATRIOTS_ID}&season=${seasonYear}`);
 }
 
 export async function getTeamNews() {
@@ -48,7 +56,8 @@ export async function getTeamNews() {
 }
 
 export async function getStandings() {
-  return await fetchFromNFL('nflstandings', 'year=2025');
+  const year = getCurrentSeasonYear();
+  return await fetchFromNFL('nflstandings', `year=${year}`);
 }
 
 export async function getTeamPlayers() {
@@ -65,7 +74,8 @@ export async function getPlayerStats(playerId) {
 }
 
 export async function getTeamLeaders() {
-  return await fetchFromNFL('team/leaders', `teamId=${PATRIOTS_ID}&season=2025&limit=3`);
+  const season = getCurrentSeasonYear();
+  return await fetchFromNFL('team/leaders', `teamId=${PATRIOTS_ID}&season=${season}&limit=3`);
 }
 
 export async function getTeamInjuries() {

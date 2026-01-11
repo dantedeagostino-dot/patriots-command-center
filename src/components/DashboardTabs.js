@@ -411,7 +411,9 @@ function PlayerModal({ player, onClose }) {
       const values = apiStats.splits?.[0]?.stats || [];
 
       if (labels.length > 0 && values.length > 0) {
-          displayStats = labels.map((label, index) => ({
+          // Robust mapping: limit to shorter array length to avoid index errors
+          const limit = Math.min(labels.length, values.length);
+          displayStats = labels.slice(0, limit).map((label, index) => ({
               name: label,
               value: values[index] || "-"
           }));
@@ -687,7 +689,7 @@ export default function DashboardTabs({ schedule, nextGame, upcoming, news, play
       setSelectedHistoryGame(game);
       setHistoryGameStats(null);
       try {
-          const res = await fetch(`/api/live?id=${game.id}`);
+          const res = await fetch(`/api/history?id=${game.id}`);
           if (res.ok) { const data = await res.json(); setHistoryGameStats(data); }
       } catch (error) { console.error("Error fetching history stats:", error); }
   };

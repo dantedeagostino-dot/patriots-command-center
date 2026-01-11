@@ -18,20 +18,15 @@ export default function TeamStatsChart({ data }) {
     { key: 'turnovers', label: 'Turnovers', colorPats: '#3b82f6', colorOpp: '#94a3b8' },
   ];
 
-  // Helper to resolve data keys based on selection
-  const getPatsKey = () => {
-      if (selectedMetric === 'score') return 'patsScore';
-      // Capitalize first letter: totalYards -> PatsTotalYards (Wait, the data has patsTotalYards lowercase 'pats')
-      // Data keys: patsTotalYards, patsTurnovers
-      return `pats${selectedMetric.charAt(0).toUpperCase() + selectedMetric.slice(1)}`;
-  };
-
-  const getOppKey = () => {
-      if (selectedMetric === 'score') return 'oppScore';
-      return `opp${selectedMetric.charAt(0).toUpperCase() + selectedMetric.slice(1)}`;
+  // Explicit mapping of keys to avoid string manipulation errors
+  const METRIC_KEYS = {
+      score: { pats: 'patsScore', opp: 'oppScore' },
+      totalYards: { pats: 'patsTotalYards', opp: 'oppTotalYards' },
+      turnovers: { pats: 'patsTurnovers', opp: 'oppTurnovers' }
   };
 
   const activeMetric = metrics.find(m => m.key === selectedMetric) || metrics[0];
+  const keys = METRIC_KEYS[selectedMetric] || METRIC_KEYS.score;
 
   return (
     <div className="w-full h-96 bg-slate-900/50 rounded-xl border border-slate-700 p-4">
@@ -89,7 +84,7 @@ export default function TeamStatsChart({ data }) {
           {/* PATRIOTS LINE: Solid, Thick, Blue */}
           <Line
              type="monotone"
-             dataKey={getPatsKey()}
+             dataKey={keys.pats}
              name="Patriots"
              stroke="#3b82f6"
              strokeWidth={4}
@@ -101,7 +96,7 @@ export default function TeamStatsChart({ data }) {
           {/* OPPONENT LINE: Dotted, Slate/Red */}
           <Line
              type="monotone"
-             dataKey={getOppKey()}
+             dataKey={keys.opp}
              name="Opponent"
              stroke="#94a3b8"
              strokeWidth={2}
