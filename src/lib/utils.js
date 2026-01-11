@@ -74,9 +74,9 @@ export function processSchedule(scheduleData, cutoffDateStr = null) {
     const gameDate = new Date(game.date);
 
     // FILTRO DE FECHA (Para evitar que juegos de 2026 aparezcan en la llamada de 2024)
-    if (cutoffDate && gameDate > cutoffDate) {
-        continue;
-    }
+    // if (cutoffDate && gameDate > cutoffDate) {
+    //    continue;
+    // }
     const statusType = game.status?.type;
     
     // 1. Si ya está marcado como completado, es historia sin dudas.
