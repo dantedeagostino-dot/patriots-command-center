@@ -11,11 +11,9 @@ import { processSchedule, getGameInfo } from '../lib/utils';
 import DashboardTabs from '../components/DashboardTabs';
 
 export default async function Home() {
-  // 1. OBTENCIÓN DE DATOS (PROTEGIDA)
-  // Usamos .catch(err => null) en cada llamada para que si una falla, las demás sigan funcionando.
   const [schedulePastRaw, scheduleFutureRaw, newsRaw, standingsRaw, playersRaw, leadersRaw, injuriesRaw] = await Promise.all([
-    getPatriotsSchedule('2025').catch(() => null), // Historial y Stats (Temporada completa)
-    getPatriotsSchedule('2026').catch(() => null), // Futuro (Planificación)
+    getPatriotsSchedule('2024').catch(() => null),
+    getPatriotsSchedule('2025').catch(() => null),
     getTeamNews().catch(() => null),
     getStandings().catch(() => null),
     getTeamPlayers().catch(() => null),
@@ -23,39 +21,27 @@ export default async function Home() {
     getTeamInjuries().catch(() => null)
   ]);
 
-  // PLAN B: Si el roster principal falla, intentamos el básico
   let finalPlayersRaw = playersRaw;
   if (!finalPlayersRaw) {
       try {
-        console.log("⚠️ Roster completo falló, usando básico...");
         finalPlayersRaw = await getBasicRoster().catch(() => null);
       } catch (e) { console.error(e); }
   }
 
-  // 2. Procesar Calendario
-  // A. Historial (Usamos 2024 - Filtramos hasta Julio 2025 para evitar fugas de 2025/26)
-  const { history } = processSchedule(schedulePastRaw, '2026-07-01');
+  const { history } = processSchedule(schedulePastRaw, '2025-07-01');
   const historyFormatted = history.map(game => getGameInfo(game)).filter(Boolean);
 
-  // B. Next & Upcoming
-  // Intentamos buscar "Next" en 2024 (Playoffs) pero con el mismo filtro
-  const { next: next24 } = processSchedule(schedulePastRaw, '2026-07-01');
+  const { next: next24 } = processSchedule(schedulePastRaw, '2025-07-01');
 
-  // Upcoming viene puramente de 2026 (sin filtro o filtro futuro)
   const { upcoming: upcomingNextSeason } = processSchedule(scheduleFutureRaw);
 
-  // Si hay un juego "Siguiente" real en 2024 (Playoffs/SuperBowl), úsalo. Si no, null.
   const nextGameFormatted = getGameInfo(next24);
 
-  // Upcoming viene puramente de 2026
   const upcomingFormatted = upcomingNextSeason ? upcomingNextSeason.map(game => getGameInfo(game)).filter(Boolean) : [];
 
-  // 3. Procesar Noticias (AQUÍ ESTABA EL ERROR "b.map is not a function")
   let cleanNews = [];
   let rawList = [];
   
-  // Verificación estricta: Solo asignamos si es un Array real.
-  // Antes, si 'newsRaw.data' era un objeto de error, el código explotaba. Ahora no.
   if (Array.isArray(newsRaw)) {
       rawList = newsRaw;
   } else if (newsRaw?.data && Array.isArray(newsRaw.data)) {
@@ -78,7 +64,6 @@ export default async function Home() {
      cleanNews = [{ title: "Check official site for latest updates", link: "https://www.patriots.com/news/", source: "System", pubDate: new Date().toISOString() }];
   }
 
-  // 4. Récord
   let seasonRecord = "0-0";
   try {
      if (nextGameFormatted?.patriots?.record && nextGameFormatted.patriots.record !== "0-0") {
@@ -86,7 +71,6 @@ export default async function Home() {
      }
   } catch (e) { console.error(e); }
 
-  // 5. Roster
   let finalRoster = [];
   if (finalPlayersRaw) {
       if (finalPlayersRaw.team && finalPlayersRaw.team.athletes) {

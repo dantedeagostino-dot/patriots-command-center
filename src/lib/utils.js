@@ -1,9 +1,7 @@
 // src/lib/utils.js
 
-// URL de respaldo general
 const NFL_LOGO = "https://upload.wikimedia.org/wikipedia/en/thumb/a/a2/National_Football_League_logo.svg/1200px-National_Football_League_logo.svg.png";
 
-// ✅ DICCIONARIO DE LOGOS OFICIALES HD
 const OFFICIAL_LOGOS = {
   // AFC East
   '17': "https://upload.wikimedia.org/wikipedia/en/thumb/b/b9/New_England_Patriots_logo.svg/1200px-New_England_Patriots_logo.svg.png", // Patriots
@@ -63,7 +61,6 @@ export function processSchedule(scheduleData, cutoffDateStr = null) {
   const now = new Date();
   const cutoffDate = cutoffDateStr ? new Date(cutoffDateStr) : null;
 
-  // 1. Asegurar que las fechas sean objetos Date válidos y ordenar
   events.sort((a, b) => new Date(a.date) - new Date(b.date));
 
   const history = [];
@@ -73,52 +70,38 @@ export function processSchedule(scheduleData, cutoffDateStr = null) {
   for (const game of events) {
     const gameDate = new Date(game.date);
 
-    // FILTRO DE FECHA (Para evitar que juegos de 2026 aparezcan en la llamada de 2024)
-    // if (cutoffDate && gameDate > cutoffDate) {
-    //    continue;
-    // }
+    // Filtro de fecha
+    if (cutoffDate && gameDate > cutoffDate) {
+       continue;
+    }
+
     const statusType = game.status?.type;
     
-    // 1. Si ya está marcado como completado, es historia sin dudas.
     if (statusType?.completed) {
       history.push(game);
       continue;
     }
 
-    // LÓGICA MEJORADA: Definir el "Juego Actual/Siguiente"
-    
-    // Calculamos la diferencia en horas entre AHORA y el partido
-    // Negativo = el partido ya empezó hace X horas
-    // Positivo = faltan X horas para el partido
     const diffHours = (gameDate - now) / 1000 / 60 / 60;
 
-    // Es el juego "Next" si:
-    // A. Aún no tenemos un "next" asignado.
-    // B. Y ADEMÁS: Es en el futuro (diffHours > 0)
-    // C. O empezó hace menos de 5 horas (diffHours > -5)
-    //    (Esto atrapa el partido aunque la API tarde en ponerlo 'in-progress')
-    
     if (!next) {
-        // Si el juego es futuro O es muy reciente (ventana de 5 horas desde el inicio)
         if (diffHours > -5) { 
-            next = game; // ¡Lo encontramos! Este es el que mostraremos en la pantalla principal
-            continue;    // Pasamos al siguiente ciclo
+            next = game;
+            continue;
         }
     }
 
-    // Si ya encontramos el "Next", y este juego es futuro, va a "Upcoming"
     if (next && gameDate > now && game.id !== next.id) {
         upcoming.push(game);
         continue;
     }
 
-    // Si no cayó en ninguno de los anteriores (es viejo y no está completed, o es un error), lo mandamos a history
     if (game.id !== next?.id) {
         history.push(game);
     }
   }
 
-  history.reverse(); // El más reciente primero
+  history.reverse();
   return { history, next, upcoming };
 }
 
@@ -135,9 +118,8 @@ export function getGameInfo(game) {
   if (!patriots || !opponent) return null;
 
   const gameDate = new Date(game.date);
-  const now = new Date(); // Obtenemos la hora actual para comparar
+  const now = new Date();
 
-  // Función segura para obtener score
   const getScore = (competitor) => {
     if (!competitor) return "0";
     if (!competitor.score) return "0";
@@ -147,7 +129,6 @@ export function getGameInfo(game) {
     return competitor.score.toString();
   };
 
-  // Función mejorada para obtener logo
   const getLogo = (competitor) => {
       const teamId = competitor?.team?.id;
       if (teamId && OFFICIAL_LOGOS[teamId]) {
@@ -159,17 +140,10 @@ export function getGameInfo(game) {
       return NFL_LOGO;
   };
 
-  // --- LÓGICA DE ESTADO EN VIVO CORREGIDA ---
-  // 1. ¿La API dice que está activo?
   const apiSaysLive = game.status?.type?.state === 'in';
-  
-  // 2. ¿La API dice que terminó?
   const isFinished = game.status?.type?.state === 'post';
-
-  // 3. ¿Ya pasó la hora de inicio? (Damos 5 minutos de gracia antes de forzar la vista)
   const isPastStartTime = now >= gameDate;
 
-  // CONCLUSIÓN: Es Live si la API lo dice, O SI ya es la hora y no ha terminado.
   const isLive = apiSaysLive || (isPastStartTime && !isFinished);
 
   return {
@@ -180,7 +154,7 @@ export function getGameInfo(game) {
     name: game.name || "TBD",
     venue: competition.venue?.fullName || "Stadium TBD",
     status: game.status?.type?.detail || "Scheduled", 
-    isLive: isLive, // <--- Aquí usamos nuestra nueva lógica
+    isLive: isLive,
     patriots: {
       score: getScore(patriots),
       logo: getLogo(patriots), 

@@ -5,11 +5,9 @@ import ScoreTrendChart from './ScoreTrendChart';
 import SeasonPerformanceChart from './SeasonPerformanceChart';
 import TeamStatsChart from './TeamStatsChart';
 
-// --- CONFIGURACIÓN ---
 const TEST_LIVE_MODE = false; // ⚠️ Poner en false para producción
-const POLLING_INTERVAL = 10000; // Intervalo de 10s para ver datos rápidos
+const POLLING_INTERVAL = 10000;
 
-// --- MOCKS CON DATOS ---
 const MOCK_PLAYS = [
     { time: "Q4 01:58", text: "Drake Maye pass deep right to Douglas for 25 yards TOUCHDOWN." },
     { time: "Q4 02:05", text: "Stevenson rush up the middle for 4 yards." },
@@ -36,8 +34,6 @@ const MOCK_CHART_DATA = [
     { time: '7', pats: 24, opp: 24 },
     { time: '8', pats: 27, opp: 24 }
 ];
-
-// --- COMPONENTES AUXILIARES ---
 
 function Countdown({ targetDate }) {
   const [timeLeft, setTimeLeft] = useState("");
@@ -287,8 +283,6 @@ function StandingsWidget({ standings }) {
 }
 
 function InjuryReportWidget({ injuries }) {
-  // 🛡️ CORRECCIÓN DE SEGURIDAD:
-  // Verificamos estrictamente que sea un array. Si es un objeto de error u otra cosa, usamos [].
   let list = [];
   
   if (injuries?.injuries && Array.isArray(injuries.injuries)) {
@@ -297,7 +291,6 @@ function InjuryReportWidget({ injuries }) {
       list = injuries;
   }
 
-  // Si la lista está vacía, no renderizamos nada.
   if (list.length === 0) return null;
 
   return (
@@ -339,8 +332,6 @@ function InjuryReportWidget({ injuries }) {
 }
 
 function SeasonLeadersWidget({ leaders }) {
-  // 🛡️ CORRECCIÓN DE SEGURIDAD:
-  // Aseguramos que 'categories' sea siempre un array válido.
   let categories = [];
   
   if (leaders?.leaders && Array.isArray(leaders.leaders)) {
@@ -505,7 +496,6 @@ function GameStatsModal({ game, stats, onClose }) {
   );
 }
 
-// --- LISTA DE JUGADORES (AQUÍ ESTÁ LA FUNCIÓN RESTAURADA) ---
 function RosterList({ players }) {
   const [search, setSearch] = useState("");
   const [selectedPlayer, setSelectedPlayer] = useState(null); 
@@ -565,32 +555,24 @@ function RosterList({ players }) {
   );
 }
 
-// --- COMPONENTE PRINCIPAL (ACTUALIZADO) ---
-
 export default function DashboardTabs({ history, nextGame, upcoming, news, players, debugData, leaders, injuries, standings }) {
-  // Si no hay juego siguiente, mostramos el historial o stats por defecto
   const [activeTab, setActiveTab] = useState(nextGame ? 'next' : 'history');
   
-  // ESTADOS
   const [livePlays, setLivePlays] = useState([]);
   const [liveStats, setLiveStats] = useState(null);
   const [liveOdds, setLiveOdds] = useState(null);
   const [chartData, setChartData] = useState([]);
   
-  // ✅ ESTADO PARA EL MARCADOR EN TIEMPO REAL
   const [liveScoreboard, setLiveScoreboard] = useState(null); 
 
-  // NUEVO: ESTADOS PARA OPTIMIZACIÓN Y CONTROL MANUAL
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Historial
   const [selectedHistoryGame, setSelectedHistoryGame] = useState(null);
   const [historyGameStats, setHistoryGameStats] = useState(null);
 
-  // ✅ CORRECCIÓN DE ORDENAMIENTO Y CLAVES ÚNICAS (SOLUCIÓN DEFINITIVA)
   const seasonChartData = history && history.length > 0 ? [...history]
-      .sort((a, b) => new Date(a.dateRaw).getTime() - new Date(b.dateRaw).getTime()) // 1. Ordenar por fecha (timestamp)
+      .sort((a, b) => new Date(a.dateRaw).getTime() - new Date(b.dateRaw).getTime())
       .map((game, index) => {
           const patsScore = parseInt(game.patriots.score) || 0;
           const oppScore = parseInt(game.opponent.score) || 0;
@@ -600,22 +582,18 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
               date: game.dateString,
               opponent: game.opponent.name,
               oppCode: game.opponent.name ? game.opponent.name.substring(0, 3).toUpperCase() : 'OPP',
-              // 2. Crear ID único para evitar que Recharts agrupe los "JET" repetidos
               uniqueId: `${game.opponent.name ? game.opponent.name.substring(0, 3).toUpperCase() : 'OPP'}_${index}`,
               diff: diff,
               score: `${patsScore}-${oppScore}`,
 
-              // Comparatives
               patsScore: patsScore,
               oppScore: oppScore,
 
-              // MOCKS for tactical stats evolution (Pats vs Opp)
               patsTotalYards: game.patriots?.totalYards || Math.floor(Math.random() * (450 - 250 + 1) + 250),
               oppTotalYards: game.opponent?.totalYards || Math.floor(Math.random() * (450 - 250 + 1) + 250),
               patsTurnovers: game.patriots?.turnovers !== undefined ? game.patriots.turnovers : Math.floor(Math.random() * 4),
               oppTurnovers: game.opponent?.turnovers !== undefined ? game.opponent.turnovers : Math.floor(Math.random() * 4),
 
-              // Extra mocks
               patsPassingYards: Math.floor(Math.random() * (350 - 150 + 1) + 150),
               oppPassingYards: Math.floor(Math.random() * (350 - 150 + 1) + 150),
               patsRushingYards: Math.floor(Math.random() * (200 - 50 + 1) + 50),
@@ -627,11 +605,8 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
           };
       }) : [];
 
-  // Objeto base para mostrar (datos estáticos)
   const baseGame = nextGame; 
 
-  // --- LÓGICA DE FUSIÓN DE DATOS ---
-  // Si tenemos datos en vivo (liveScoreboard), los usamos. Si no, usamos los estáticos (baseGame).
   const displayGame = TEST_LIVE_MODE && nextGame ? {
       ...nextGame, 
       isLive: true, 
@@ -641,14 +616,13 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
       yardLine: 68, possessionTeam: 'home', down: 2, distance: 5
   } : (liveScoreboard ? {
       ...baseGame,
-      isLive: true, // Forzamos visualmente a true si tenemos datos
+      isLive: true,
       status: liveScoreboard.status,
       patriots: { ...baseGame.patriots, score: liveScoreboard.patsScore },
       opponent: { ...baseGame.opponent, score: liveScoreboard.oppScore }
   } : baseGame);
 
 
-  // FUNCION DE FETCH MANUAL Y AUTOMATICA
   const fetchLiveData = async () => {
       if (!nextGame || TEST_LIVE_MODE) return;
 
@@ -659,16 +633,13 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
         
         const data = await res.json();
 
-        // 1. Actualizar jugadas
         if (data.plays) setLivePlays(data.plays.drives?.current?.plays || data.plays.plays || []);
         
-        // 2. Actualizar apuestas
         if (data.odds) {
            const provider = data.odds.pickcenter?.[0] || {};
            setLiveOdds({ spread: provider.spread || "-", overUnder: provider.overUnder || "-", moneyline: provider.moneyline || "-" });
         }
 
-        // 3. ACTUALIZAR MARCADOR Y ESTADO
         if (data.boxScore && data.boxScore.teams) {
             const patsTeam = data.boxScore.teams.find(t => t.team.id === '17');
             const oppTeam = data.boxScore.teams.find(t => t.team.id !== '17');
@@ -680,7 +651,6 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
                 gameStatus = data.boxScore.status.type.detail;
             }
 
-            // CORRECCIÓN LIVE MODE: Solo actualizamos si realmente hay datos relevantes
             setLiveScoreboard({
                 patsScore: patsTeam ? patsTeam.score : "0",
                 oppScore: oppTeam ? oppTeam.score : "0",
@@ -698,9 +668,6 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
         setLivePlays(MOCK_PLAYS); setLiveStats(MOCK_STATS); setLiveOdds(MOCK_ODDS); setChartData(MOCK_CHART_DATA); return;
     }
 
-    // Si el juego está en vivo, activamos auto-refresh por defecto (si el usuario no lo ha apagado explícitamente)
-    // Pero aquí solo configuramos el intervalo
-
     if (!nextGame) return;
 
     let interval = null;
@@ -708,7 +675,6 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
         interval = setInterval(fetchLiveData, POLLING_INTERVAL);
     }
 
-    // Hacemos un fetch inicial si está en vivo
     if (nextGame.isLive) {
         fetchLiveData();
     }
@@ -735,7 +701,6 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
           />
       )}
 
-      {/* CONTROLES DE ACTUALIZACIÓN (OPTIMIZACIÓN) */}
       <div className="flex justify-end mb-2 items-center gap-3">
          <div className="flex items-center gap-2">
             <span className="text-[10px] uppercase text-gray-500 font-bold">Auto-Update</span>
@@ -829,7 +794,6 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
           </div>
         )}
 
-        {/* --- PESTAÑAS NEXT, UPCOMING, ROSTER (Sin cambios) --- */}
         {activeTab === 'next' && (
           <div className="animate-in fade-in zoom-in duration-500">
              {displayGame ? (
