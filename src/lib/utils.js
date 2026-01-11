@@ -55,11 +55,19 @@ const OFFICIAL_LOGOS = {
 };
 
 export function processSchedule(scheduleData, cutoffDateStr = null) {
-  if (!scheduleData || !scheduleData.events) {
-    return { history: [], next: null, upcoming: [] };
+  // ROBUST DATA EXTRACTION: Try to find 'events' in common locations
+  let events = [];
+  if (scheduleData?.events) {
+      events = scheduleData.events;
+  } else if (scheduleData?.team?.schedule) {
+      events = scheduleData.team.schedule;
+  } else if (scheduleData?.schedule) {
+      events = scheduleData.schedule;
   }
 
-  const events = scheduleData.events;
+  if (!events || !Array.isArray(events) || events.length === 0) {
+    return { history: [], next: null, upcoming: [] };
+  }
   const now = new Date();
   const cutoffDate = cutoffDateStr ? new Date(cutoffDateStr) : null;
 
