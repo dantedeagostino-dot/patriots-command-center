@@ -7,13 +7,13 @@ import {
   getTeamLeaders,
   getTeamInjuries
 } from '../lib/nflApi';
-import { processSchedule, getGameInfo } from '../lib/utils';
+import { getGameInfo } from '../lib/utils';
 import DashboardTabs from '../components/DashboardTabs';
 
 export default async function Home() {
-  const [schedulePastRaw, scheduleFutureRaw, newsRaw, standingsRaw, playersRaw, leadersRaw, injuriesRaw] = await Promise.all([
-    getPatriotsSchedule('2024').catch(() => null),
+  const [schedule2025Raw, schedule2026Raw, newsRaw, standingsRaw, playersRaw, leadersRaw, injuriesRaw] = await Promise.all([
     getPatriotsSchedule('2025').catch(() => null),
+    getPatriotsSchedule('2026').catch(() => null),
     getTeamNews().catch(() => null),
     getStandings().catch(() => null),
     getTeamPlayers().catch(() => null),
@@ -21,23 +21,52 @@ export default async function Home() {
     getTeamInjuries().catch(() => null)
   ]);
 
+  // Combine events from 2025 and 2026 (Jan 2026 is part of 2025 season mostly, but might be in 2026 fetch depending on API)
+  let allEvents = [];
+  if (schedule2025Raw?.events) allEvents = [...allEvents, ...schedule2025Raw.events];
+  if (schedule2026Raw?.events) allEvents = [...allEvents, ...schedule2026Raw.events];
+
+  // Filter games between Sep 4, 2025 and Jan 4, 2026
+  const startDate = new Date('2025-09-04T00:00:00Z');
+  const endDate = new Date('2026-01-04T23:59:59Z');
+
+  const filteredGames = allEvents.filter(game => {
+    const gameDate = new Date(game.date);
+    return gameDate >= startDate && gameDate <= endDate;
+  });
+
+  // Sort by date
+  filteredGames.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  // Remove duplicates based on ID
+  const uniqueGames = [];
+  const seenIds = new Set();
+  for (const game of filteredGames) {
+      if (!seenIds.has(game.id)) {
+          uniqueGames.push(game);
+          seenIds.add(game.id);
+      }
+  }
+
+  const scheduleFormatted = uniqueGames.map(game => getGameInfo(game)).filter(Boolean);
+
+  // Determine next game (first game in the list that hasn't happened yet or is live)
+  const now = new Date();
+  const nextGameRaw = uniqueGames.find(game => {
+      const gDate = new Date(game.date);
+      const isFinished = game.status?.type?.completed;
+      return !isFinished && (gDate > now || game.status?.type?.state === 'in');
+  });
+
+  const nextGameFormatted = nextGameRaw ? getGameInfo(nextGameRaw) : null;
+
+
   let finalPlayersRaw = playersRaw;
   if (!finalPlayersRaw) {
       try {
         finalPlayersRaw = await getBasicRoster().catch(() => null);
       } catch (e) { console.error(e); }
   }
-
-  const { history } = processSchedule(schedulePastRaw, '2025-07-01');
-  const historyFormatted = history.map(game => getGameInfo(game)).filter(Boolean);
-
-  const { next: next24 } = processSchedule(schedulePastRaw, '2025-07-01');
-
-  const { upcoming: upcomingNextSeason } = processSchedule(scheduleFutureRaw);
-
-  const nextGameFormatted = getGameInfo(next24);
-
-  const upcomingFormatted = upcomingNextSeason ? upcomingNextSeason.map(game => getGameInfo(game)).filter(Boolean) : [];
 
   let cleanNews = [];
   let rawList = [];
@@ -114,9 +143,8 @@ export default async function Home() {
            </div>
 
            <DashboardTabs 
-              history={historyFormatted} 
+              schedule={scheduleFormatted}
               nextGame={nextGameFormatted} 
-              upcoming={upcomingFormatted}
               news={cleanNews}
               players={finalRoster}
               leaders={leadersRaw}   

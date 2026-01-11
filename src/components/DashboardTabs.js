@@ -555,8 +555,8 @@ function RosterList({ players }) {
   );
 }
 
-export default function DashboardTabs({ history, nextGame, upcoming, news, players, debugData, leaders, injuries, standings }) {
-  const [activeTab, setActiveTab] = useState(nextGame ? 'next' : 'history');
+export default function DashboardTabs({ schedule, nextGame, upcoming, news, players, debugData, leaders, injuries, standings }) {
+  const [activeTab, setActiveTab] = useState(nextGame ? 'next' : 'schedule');
   
   const [livePlays, setLivePlays] = useState([]);
   const [liveStats, setLiveStats] = useState(null);
@@ -571,7 +571,8 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
   const [selectedHistoryGame, setSelectedHistoryGame] = useState(null);
   const [historyGameStats, setHistoryGameStats] = useState(null);
 
-  const seasonChartData = history && history.length > 0 ? [...history]
+  const seasonChartData = schedule && schedule.length > 0 ? [...schedule]
+      .filter(game => game.status === "Final" || game.status === "Postponed" || game.patriots?.score !== "0") // Only include played games in charts
       .sort((a, b) => new Date(a.dateRaw).getTime() - new Date(b.dateRaw).getTime())
       .map((game, index) => {
           const patsScore = parseInt(game.patriots.score) || 0;
@@ -722,14 +723,14 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
       </div>
 
       <div className="flex border-b border-slate-700 mb-6 bg-slate-900/50 rounded-t-xl overflow-hidden overflow-x-auto">
-        {['history', 'stats', 'next', 'roster'].map((tab) => (
+        {['schedule', 'stats', 'next', 'roster'].map((tab) => (
           <button 
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`flex-1 min-w-[100px] py-4 text-xs md:text-sm font-bold tracking-wider uppercase transition-colors whitespace-nowrap
               ${activeTab === tab ? 'bg-slate-800 text-blue-400 border-b-2 border-blue-400' : 'text-gray-500 hover:text-white hover:bg-slate-800'}`}
           >
-            {tab === 'history' ? 'History' : tab === 'roster' ? 'Roster' : tab === 'stats' ? 'Stats' : tab}
+            {tab === 'schedule' ? 'Schedule' : tab === 'roster' ? 'Roster' : tab === 'stats' ? 'Stats' : tab}
           </button>
         ))}
       </div>
@@ -742,19 +743,20 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
            </div>
         )}
 
-        {activeTab === 'history' && (
+        {activeTab === 'schedule' && (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
 
             <NewsSection news={news} />
 
             <div className="flex items-center gap-4 mb-4 mt-8">
                <div className="h-px bg-slate-700 flex-1"></div>
-               <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Season Results</h2>
+               <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Season Schedule</h2>
                <div className="h-px bg-slate-700 flex-1"></div>
             </div>
 
             <div className="space-y-2">
-              {history.length > 0 ? history.map(game => {
+              {schedule && schedule.length > 0 ? schedule.map(game => {
+                 const isCompleted = game.status?.toLowerCase().includes("final") || game.status?.toLowerCase().includes("post") || (game.patriots.score !== "0" && game.patriots.score !== 0);
                  const patsScore = parseInt(game.patriots.score) || 0;
                  const oppScore = parseInt(game.opponent.score) || 0;
                  const isWin = patsScore > oppScore;
@@ -762,14 +764,20 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
                  return (
                  <button 
                     key={game.id} 
-                    onClick={() => handleHistoryClick(game)}
-                    className="w-full flex items-center justify-between bg-slate-900/40 hover:bg-slate-800 p-3 rounded border border-slate-700 hover:border-blue-500 transition group"
+                    onClick={() => isCompleted && handleHistoryClick(game)}
+                    className={`w-full flex items-center justify-between bg-slate-900/40 p-3 rounded border border-slate-700 transition group ${isCompleted ? 'hover:bg-slate-800 hover:border-blue-500' : ''}`}
                  >
                     <div className="flex flex-col items-start w-24">
                         <span className="text-gray-400 text-xs font-bold font-mono">{game.dateString}</span>
-                        <span className={`text-[10px] font-black uppercase tracking-wider ${isWin ? 'text-green-500' : 'text-red-500'}`}>
-                          {isWin ? 'WIN' : 'LOSS'}
-                        </span>
+                        {isCompleted ? (
+                           <span className={`text-[10px] font-black uppercase tracking-wider ${isWin ? 'text-green-500' : 'text-red-500'}`}>
+                             {isWin ? 'WIN' : 'LOSS'}
+                           </span>
+                        ) : (
+                           <span className="text-[10px] font-black text-blue-400 uppercase tracking-wider">
+                             {game.timeString}
+                           </span>
+                        )}
                     </div>
 
                     <div className="flex items-center justify-center gap-6 flex-1">
@@ -777,7 +785,7 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
 
                         <div className="flex items-center justify-center bg-black/50 px-4 py-2 rounded border border-slate-800">
                             <span className="text-2xl font-black text-white font-mono tracking-widest leading-none">
-                                {patsScore} - {oppScore}
+                                {isCompleted ? `${patsScore} - ${oppScore}` : 'VS'}
                             </span>
                         </div>
 
@@ -785,11 +793,15 @@ export default function DashboardTabs({ history, nextGame, upcoming, news, playe
                     </div>
 
                     <div className="w-24 text-right hidden md:block">
-                        <span className="text-[10px] font-bold text-gray-600 group-hover:text-blue-400 transition uppercase tracking-wider">View Details</span>
+                        {isCompleted ? (
+                          <span className="text-[10px] font-bold text-gray-600 group-hover:text-blue-400 transition uppercase tracking-wider">View Details</span>
+                        ) : (
+                          <span className="text-[10px] font-bold text-gray-600 uppercase tracking-wider">Upcoming</span>
+                        )}
                     </div>
                  </button>
                  );
-              }) : <div className="text-center p-10 text-gray-500">No games completed yet.</div>}
+              }) : <div className="text-center p-10 text-gray-500">No games found for this period.</div>}
             </div>
           </div>
         )}
