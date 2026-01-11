@@ -7,14 +7,13 @@
 - Network:       http://192.168.0.2:3000
 
 ✓ Starting...
-✓ Ready in 322ms
+✓ Ready in 296ms
 ⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
-Error API nfl-news: 400
-Error API nflstandings: 400
-Error API team/leaders: 400
-Error API team/v2/injuries: 400
-Error API nfl-schedule-team: 400
-Error API nflteamplayers: 400
-Error API nfl-schedule-team: 400
-⚠️ Roster completo falló, usando básico...
-Error API players/id: 400
+Error API nfl-schedule-team: 429 {"message":"Too many requests"}
+Error API nflstandings: 429 {"message":"Too many requests"}
+Error API nfl-schedule-team: 429 {"message":"Too many requests"}
+Error API nflteamplayers: 429 {"message":"Too many requests"}
+Error API team/leaders: 429 {"message":"Too many requests"}
+Error API team/v2/injuries: 429 {"message":"Too many requests"}
+Error API nfl-news: 403 {"message":"You are not subscribed to this API."}
+Error API players/id: 429 {"message":"Too many requests"}
