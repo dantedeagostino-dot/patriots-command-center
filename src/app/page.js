@@ -23,15 +23,19 @@ export default async function Home() {
 
   // Combine events from 2025 and 2026 (Jan 2026 is part of 2025 season mostly, but might be in 2026 fetch depending on API)
   let allEvents = [];
-  if (schedule2025Raw?.events) allEvents = [...allEvents, ...schedule2025Raw.events];
-  if (schedule2026Raw?.events) allEvents = [...allEvents, ...schedule2026Raw.events];
+  // Helper to extract events safely
+  const extractEvents = (data) => Array.isArray(data?.events) ? data.events : [];
+
+  allEvents = [...extractEvents(schedule2025Raw), ...extractEvents(schedule2026Raw)];
 
   // Filter games between Sep 4, 2025 and Jan 4, 2026
   const startDate = new Date('2025-09-04T00:00:00Z');
   const endDate = new Date('2026-01-04T23:59:59Z');
 
   const filteredGames = allEvents.filter(game => {
+    if (!game.date) return false;
     const gameDate = new Date(game.date);
+    if (isNaN(gameDate.getTime())) return false; // Filter out invalid dates
     return gameDate >= startDate && gameDate <= endDate;
   });
 
