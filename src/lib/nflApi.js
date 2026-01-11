@@ -1,31 +1,40 @@
 // src/lib/nflApi.js
 
-const options = {
-  method: 'GET',
-  headers: {
-    'x-rapidapi-key': process.env.RAPIDAPI_KEY,
-    'x-rapidapi-host': 'nfl-api1.p.rapidapi.com'
-  }
-};
-
 const BASE_URL = 'https://nfl-api1.p.rapidapi.com';
-const PATRIOTS_ID = '17'; 
+const PATRIOTS_ID = '17';
 
 export async function fetchFromNFL(endpoint, params = '') {
   try {
-    const url = `${BASE_URL}/${endpoint}${params ? `?${params}` : ''}`;
-    // Cache de 1 hora
-    const response = await fetch(url, { ...options, next: { revalidate: 10 } });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Error API ${endpoint}: ${response.status}`, errorText);
+    const apiKey = process.env.RAPIDAPI_KEY;
+    const apiHost = process.env.RAPIDAPI_HOST || 'nfl-api1.p.rapidapi.com';
+
+    if (!apiKey) {
+      console.error('⚠️ RAPIDAPI_KEY no está definida. Define la variable de entorno RAPIDAPI_KEY.');
       return null;
     }
-    
+
+    const url = `${BASE_URL}/${endpoint}${params ? `?${params}` : ''}`;
+    console.log(`[nflApi] Fetching: ${url} (host: ${apiHost})`);
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'x-rapidapi-key': apiKey,
+        'x-rapidapi-host': apiHost
+      },
+      // Keep ISR hint if used by Next.js; adjust revalidate as needed
+      next: { revalidate: 10 }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Error API ${endpoint}: status=${response.status} body=${errorText}`);
+      return null;
+    }
+
     return await response.json();
   } catch (error) {
-    console.error("❌ Error de red:", error);
+    console.error("❌ Error de red en fetchFromNFL:", error);
     return null;
   }
 }
