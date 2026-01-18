@@ -108,16 +108,25 @@ export function processSchedule(scheduleData, cutoffDateStr = null) {
 export function getGameInfo(game) {
   if (!game) return null;
   
-  const competition = game.competitions?.[0];
-  if (!competition) return null;
+  const competition = game.competitions?.[0] || {};
+  // if (!competition) return null; // REMOVED Strict check for fail-safe
 
   const competitors = competition.competitors || [];
-  const patriots = competitors.find(c => c.team.id === '17') || competitors[0];
-  const opponent = competitors.find(c => c.team.id !== '17') || competitors[1];
 
-  if (!patriots || !opponent) return null;
+  // Fail-Safe: Find Patriots or create fallback
+  const safePatriots = competitors.find(c => c.team?.id === '17') || competitors[0] || {
+      team: { id: '17', shortDisplayName: 'NE', logo: OFFICIAL_LOGOS['17'] },
+      score: '0',
+      records: [{ summary: '0-0' }]
+  };
 
-  const gameDate = new Date(game.date);
+  // Fail-Safe: Find Opponent or create fallback
+  const safeOpponent = competitors.find(c => c.team?.id !== '17' && c !== safePatriots) || competitors[1] || {
+      team: { id: '0', shortDisplayName: 'TBD', logo: NFL_LOGO },
+      score: '0'
+  };
+
+  const gameDate = new Date(game.date || new Date().toISOString());
   const now = new Date();
 
   const getScore = (competitor) => {
@@ -156,17 +165,17 @@ export function getGameInfo(game) {
     status: game.status?.type?.detail || "Scheduled", 
     isLive: isLive,
     patriots: {
-      score: getScore(patriots),
-      logo: getLogo(patriots), 
-      name: patriots.team?.shortDisplayName || "Pats",
-      record: patriots.records?.[0]?.summary || "0-0",
-      isHome: patriots.homeAway === 'home'
+      score: getScore(safePatriots),
+      logo: getLogo(safePatriots),
+      name: safePatriots.team?.shortDisplayName || "Pats",
+      record: safePatriots.records?.[0]?.summary || "0-0",
+      isHome: safePatriots.homeAway === 'home'
     },
     opponent: {
-      score: getScore(opponent),
-      logo: getLogo(opponent), 
-      name: opponent.team?.shortDisplayName || "Opponent",
-      record: opponent.records?.[0]?.summary || "0-0"
+      score: getScore(safeOpponent),
+      logo: getLogo(safeOpponent),
+      name: safeOpponent.team?.shortDisplayName || "Opponent",
+      record: safeOpponent.records?.[0]?.summary || "0-0"
     }
   };
 }

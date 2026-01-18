@@ -26,9 +26,9 @@ export default async function Home() {
   if (schedule2025Raw?.events) allEvents = [...allEvents, ...schedule2025Raw.events];
   if (schedule2026Raw?.events) allEvents = [...allEvents, ...schedule2026Raw.events];
 
-  // Filter games between Sep 4, 2025 and Jan 4, 2026
-  const startDate = new Date('2025-09-04T00:00:00Z');
-  const endDate = new Date('2026-01-04T23:59:59Z');
+  // Filter games between Aug 1, 2025 and Feb 28, 2026 (Full Season + Playoffs)
+  const startDate = new Date('2025-08-01T00:00:00Z');
+  const endDate = new Date('2026-02-28T23:59:59Z');
 
   const filteredGames = allEvents.filter(game => {
     const gameDate = new Date(game.date);
@@ -50,12 +50,11 @@ export default async function Home() {
 
   const scheduleFormatted = uniqueGames.map(game => getGameInfo(game)).filter(Boolean);
 
-  // Determine next game (first game in the list that hasn't happened yet or is live)
-  const now = new Date();
+  // Determine next game: First game that is NOT Final/Post (covers Scheduled, In Progress, Halftime, etc.)
   const nextGameRaw = uniqueGames.find(game => {
-      const gDate = new Date(game.date);
-      const isFinished = game.status?.type?.completed;
-      return !isFinished && (gDate > now || game.status?.type?.state === 'in');
+      const isCompleted = game.status?.type?.completed;
+      const state = game.status?.type?.state;
+      return !isCompleted && state !== 'post';
   });
 
   const nextGameFormatted = nextGameRaw ? getGameInfo(nextGameRaw) : null;
