@@ -26,9 +26,9 @@ export default async function Home() {
   if (schedule2025Raw?.events) allEvents = [...allEvents, ...schedule2025Raw.events];
   if (schedule2026Raw?.events) allEvents = [...allEvents, ...schedule2026Raw.events];
 
-  // Filter games between Sep 4, 2025 and Jan 4, 2026
+  // Filter games between Sep 4, 2025 and Feb 28, 2026 (Extended for Playoffs/Super Bowl)
   const startDate = new Date('2025-09-04T00:00:00Z');
-  const endDate = new Date('2026-01-04T23:59:59Z');
+  const endDate = new Date('2026-02-28T23:59:59Z');
 
   const filteredGames = allEvents.filter(game => {
     const gameDate = new Date(game.date);
@@ -48,14 +48,14 @@ export default async function Home() {
       }
   }
 
-  const scheduleFormatted = uniqueGames.map(game => getGameInfo(game)).filter(Boolean);
+  // Full schedule for charts (now includes playoffs)
+  const fullSeasonSchedule = uniqueGames.map(game => getGameInfo(game)).filter(Boolean);
 
-  // Determine next game (first game in the list that hasn't happened yet or is live)
-  const now = new Date();
+  // Determine next game (simply the first non-completed game in the sorted list)
+  // This is more robust than checking (date > now) for live transitions
   const nextGameRaw = uniqueGames.find(game => {
-      const gDate = new Date(game.date);
       const isFinished = game.status?.type?.completed;
-      return !isFinished && (gDate > now || game.status?.type?.state === 'in');
+      return !isFinished;
   });
 
   const nextGameFormatted = nextGameRaw ? getGameInfo(nextGameRaw) : null;
@@ -143,7 +143,7 @@ export default async function Home() {
            </div>
 
            <DashboardTabs 
-              schedule={scheduleFormatted}
+              schedule={fullSeasonSchedule}
               nextGame={nextGameFormatted} 
               news={cleanNews}
               players={finalRoster}
