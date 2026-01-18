@@ -105,6 +105,15 @@ export function processSchedule(scheduleData, cutoffDateStr = null) {
   return { history, next, upcoming };
 }
 
+export function getCurrentSeason() {
+  const now = new Date();
+  // Si es Enero (0) o Febrero (1), es parte de la temporada anterior
+  if (now.getMonth() <= 1) {
+    return now.getFullYear() - 1;
+  }
+  return now.getFullYear();
+}
+
 export function getGameInfo(game) {
   if (!game) return null;
   

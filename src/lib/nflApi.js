@@ -8,6 +8,8 @@ const options = {
   }
 };
 
+import { getCurrentSeason } from './utils';
+
 const BASE_URL = 'https://nfl-api1.p.rapidapi.com';
 const PATRIOTS_ID = '17'; 
 
@@ -30,7 +32,7 @@ export async function fetchFromNFL(endpoint, params = '') {
   }
 }
 
-export async function getPatriotsSchedule(season = '2025') {
+export async function getPatriotsSchedule(season = getCurrentSeason()) {
   return await fetchFromNFL('nfl-schedule-team', `teamId=${PATRIOTS_ID}&season=${season}`);
 }
 
@@ -39,7 +41,7 @@ export async function getTeamNews() {
 }
 
 export async function getStandings() {
-  return await fetchFromNFL('nflstandings', 'year=2025');
+  return await fetchFromNFL('nflstandings', `year=${getCurrentSeason()}`);
 }
 
 export async function getTeamPlayers() {
@@ -56,7 +58,7 @@ export async function getPlayerStats(playerId) {
 }
 
 export async function getTeamLeaders() {
-  return await fetchFromNFL('team/leaders', `teamId=${PATRIOTS_ID}&season=2025&limit=3`);
+  return await fetchFromNFL('team/leaders', `teamId=${PATRIOTS_ID}&season=${getCurrentSeason()}&limit=3`);
 }
 
 export async function getTeamInjuries() {

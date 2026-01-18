@@ -7,13 +7,14 @@ import {
   getTeamLeaders,
   getTeamInjuries
 } from '../lib/nflApi';
-import { getGameInfo } from '../lib/utils';
+import { getGameInfo, getCurrentSeason } from '../lib/utils';
 import DashboardTabs from '../components/DashboardTabs';
 
 export default async function Home() {
-  const [schedule2025Raw, schedule2026Raw, newsRaw, standingsRaw, playersRaw, leadersRaw, injuriesRaw] = await Promise.all([
-    getPatriotsSchedule('2025').catch(() => null),
-    getPatriotsSchedule('2026').catch(() => null),
+  const currentSeason = getCurrentSeason();
+  const [scheduleCurrentRaw, scheduleNextRaw, newsRaw, standingsRaw, playersRaw, leadersRaw, injuriesRaw] = await Promise.all([
+    getPatriotsSchedule(currentSeason.toString()).catch(() => null),
+    getPatriotsSchedule((currentSeason + 1).toString()).catch(() => null),
     getTeamNews().catch(() => null),
     getStandings().catch(() => null),
     getTeamPlayers().catch(() => null),
@@ -21,14 +22,14 @@ export default async function Home() {
     getTeamInjuries().catch(() => null)
   ]);
 
-  // Combine events from 2025 and 2026 (Jan 2026 is part of 2025 season mostly, but might be in 2026 fetch depending on API)
+  // Combine events from current and next season
   let allEvents = [];
-  if (schedule2025Raw?.events) allEvents = [...allEvents, ...schedule2025Raw.events];
-  if (schedule2026Raw?.events) allEvents = [...allEvents, ...schedule2026Raw.events];
+  if (scheduleCurrentRaw?.events) allEvents = [...allEvents, ...scheduleCurrentRaw.events];
+  if (scheduleNextRaw?.events) allEvents = [...allEvents, ...scheduleNextRaw.events];
 
-  // Filter games between Sep 4, 2025 and Jan 4, 2026
-  const startDate = new Date('2025-09-04T00:00:00Z');
-  const endDate = new Date('2026-01-04T23:59:59Z');
+  // Filter games between Sep 4 of current season and Feb 28 of next year (to include playoffs/Super Bowl)
+  const startDate = new Date(`${currentSeason}-09-04T00:00:00Z`);
+  const endDate = new Date(`${currentSeason + 1}-02-28T23:59:59Z`);
 
   const filteredGames = allEvents.filter(game => {
     const gameDate = new Date(game.date);
