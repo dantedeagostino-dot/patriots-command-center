@@ -108,21 +108,38 @@ export function processSchedule(scheduleData, cutoffDateStr = null) {
 export function getGameInfo(game) {
   if (!game) return null;
   
-  const competition = game.competitions?.[0];
-  if (!competition) return null;
-
+  const competition = game.competitions?.[0] || {};
   const competitors = competition.competitors || [];
-  const patriots = competitors.find(c => c.team.id === '17') || competitors[0];
-  const opponent = competitors.find(c => c.team.id !== '17') || competitors[1];
 
-  if (!patriots || !opponent) return null;
+  // Estrategia "Extremadamente Defensiva" para recuperar juegos malformados
+  let patriots = competitors.find(c => c.team.id === '17');
+  let opponent = competitors.find(c => c.team.id !== '17');
 
-  const gameDate = new Date(game.date);
+  const isMalformed = !patriots || !opponent;
+
+  if (!patriots) {
+      patriots = {
+          team: { id: '17', shortDisplayName: 'Pats (RAW)', logo: OFFICIAL_LOGOS['17'] },
+          score: '0',
+          records: [{ summary: '0-0' }],
+          homeAway: 'home'
+      };
+  }
+
+  if (!opponent) {
+      opponent = {
+          team: { id: '00', shortDisplayName: 'Opp (RAW)', logo: NFL_LOGO },
+          score: '0',
+          records: [{ summary: '0-0' }]
+      };
+  }
+
+  const gameDate = new Date(game.date || new Date().toISOString());
   const now = new Date();
 
   const getScore = (competitor) => {
     if (!competitor) return "0";
-    if (!competitor.score) return "0";
+    if (competitor.score === undefined || competitor.score === null) return "0";
     if (typeof competitor.score === 'object') {
        return competitor.score.displayValue || competitor.score.value || "0";
     }
@@ -146,12 +163,14 @@ export function getGameInfo(game) {
 
   const isLive = apiSaysLive || (isPastStartTime && !isFinished);
 
+  const nameSuffix = isMalformed ? " ⚠️ (RAW DATA)" : "";
+
   return {
-    id: game.id,
-    dateRaw: game.date,
+    id: game.id || `unknown-${Math.random()}`,
+    dateRaw: game.date || new Date().toISOString(),
     dateString: gameDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
     timeString: gameDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-    name: game.name || "TBD",
+    name: (game.name || "TBD") + nameSuffix,
     venue: competition.venue?.fullName || "Stadium TBD",
     status: game.status?.type?.detail || "Scheduled", 
     isLive: isLive,

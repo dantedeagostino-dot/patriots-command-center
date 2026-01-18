@@ -26,8 +26,8 @@ export default async function Home() {
   if (schedule2025Raw?.events) allEvents = [...allEvents, ...schedule2025Raw.events];
   if (schedule2026Raw?.events) allEvents = [...allEvents, ...schedule2026Raw.events];
 
-  // Filter games between Sep 4, 2025 and Feb 28, 2026 (Extended for Playoffs/Super Bowl)
-  const startDate = new Date('2025-09-04T00:00:00Z');
+  // Filter games between Aug 1, 2025 and Feb 28, 2026 (Extended date range)
+  const startDate = new Date('2025-08-01T00:00:00Z');
   const endDate = new Date('2026-02-28T23:59:59Z');
 
   const filteredGames = allEvents.filter(game => {
