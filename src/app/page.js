@@ -26,9 +26,9 @@ export default async function Home() {
   if (schedule2025Raw?.events) allEvents = [...allEvents, ...schedule2025Raw.events];
   if (schedule2026Raw?.events) allEvents = [...allEvents, ...schedule2026Raw.events];
 
-  // Filter games between Sep 4, 2025 and Jan 4, 2026
-  const startDate = new Date('2025-09-04T00:00:00Z');
-  const endDate = new Date('2026-01-04T23:59:59Z');
+  // Filter games between Sep 1, 2025 and Feb 28, 2026 (Include full regular season + playoffs + Super Bowl)
+  const startDate = new Date('2025-09-01T00:00:00Z');
+  const endDate = new Date('2026-02-28T23:59:59Z');
 
   const filteredGames = allEvents.filter(game => {
     const gameDate = new Date(game.date);
@@ -50,14 +50,15 @@ export default async function Home() {
 
   const scheduleFormatted = uniqueGames.map(game => getGameInfo(game)).filter(Boolean);
 
-  // Determine next game (first game in the list that hasn't happened yet or is live)
-  const now = new Date();
+  // Determine next game (first game in the sorted list that is NOT completed)
+  // This correctly identifies the current live game or the immediate next one, even if date < now (e.g. started 10 mins ago)
   const nextGameRaw = uniqueGames.find(game => {
-      const gDate = new Date(game.date);
       const isFinished = game.status?.type?.completed;
-      return !isFinished && (gDate > now || game.status?.type?.state === 'in');
+      const isFinal = game.status?.type?.state === 'post';
+      return !isFinished && !isFinal;
   });
 
+  // If no future game found, maybe show the last played game or null
   const nextGameFormatted = nextGameRaw ? getGameInfo(nextGameRaw) : null;
 
 

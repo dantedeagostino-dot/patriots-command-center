@@ -12,14 +12,23 @@ This information is used to shape Next.js' roadmap and prioritize features.
 You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
 https://nextjs.org/telemetry
 
-✓ Ready in 723ms
+✓ Ready in 1149ms
 ○ Compiling / ...
+Error API nflteamplayers: 429 {"message":"Too many requests"}
+Error API team/v2/injuries: 429 {"message":"Too many requests"}
+Error API nfl-schedule-team: 429 {"message":"Too many requests"}
+Error API nflstandings: 429 {"message":"Too many requests"}
+Error API nfl-schedule-team: 403 {"message":"You are not subscribed to this API."}
+Error API nfl-news: 429 {"message":"Too many requests"}
+Error API team/leaders: 429 {"message":"Too many requests"}
+Error API players/id: 429 {"message":"Too many requests"}
+ GET / 200 in 14.1s (compile: 12.8s, render: 1272ms)
+Error API nflstandings: 429 {"message":"Too many requests"}
 Error API nfl-news: 429 {"message":"Too many requests"}
 Error API nfl-schedule-team: 429 {"message":"Too many requests"}
 Error API team/leaders: 429 {"message":"Too many requests"}
 Error API team/v2/injuries: 429 {"message":"Too many requests"}
-Error API nflteamplayers: 429 {"message":"Too many requests"}
+Error API nflteamplayers: 403 {"message":"You are not subscribed to this API."}
 Error API nfl-schedule-team: 403 {"message":"You are not subscribed to this API."}
-Error API nflstandings: 429 {"message":"Too many requests"}
 Error API players/id: 429 {"message":"Too many requests"}
- GET / 200 in 14.0s (compile: 12.6s, render: 1391ms)
+ GET / 200 in 519ms (compile: 6ms, render: 512ms)

@@ -1,6 +1,7 @@
 "use client"; 
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import ScoreTrendChart from './ScoreTrendChart';
 import SeasonPerformanceChart from './SeasonPerformanceChart';
 import TeamStatsChart from './TeamStatsChart';
@@ -35,13 +36,18 @@ const MOCK_CHART_DATA = [
     { time: '8', pats: 27, opp: 24 }
 ];
 
-function Countdown({ targetDate }) {
+function Countdown({ targetDate, onComplete }) {
   const [timeLeft, setTimeLeft] = useState("");
   useEffect(() => {
     const timer = setInterval(() => {
       const now = new Date().getTime();
       const distance = new Date(targetDate).getTime() - now;
-      if (distance < 0) { setTimeLeft("GAME TIME!"); clearInterval(timer); return; }
+      if (distance < 0) {
+          setTimeLeft("GAME TIME!");
+          if (onComplete) onComplete();
+          clearInterval(timer);
+          return;
+      }
       const days = Math.floor(distance / (1000 * 60 * 60 * 24));
       const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
       const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
@@ -75,19 +81,27 @@ function PredictionWidget({ odds }) {
 
 function BettingWidget({ odds }) {
   if (!odds) return null;
+
+  const formatValue = (val) => {
+      if (!val) return "-";
+      if (typeof val === 'string') return val;
+      if (typeof val === 'object') return val.summary || val.value || val.price || JSON.stringify(val);
+      return String(val);
+  };
+
   return (
     <div className="grid grid-cols-3 gap-2 mb-6">
        <div className="bg-slate-800 p-2 rounded border border-slate-700 text-center">
           <p className="text-[10px] text-gray-500 uppercase font-bold">Spread</p>
-          <p className="text-white font-mono font-bold text-xs">{String(odds.spread || "-")}</p>
+          <p className="text-white font-mono font-bold text-xs">{formatValue(odds.spread)}</p>
        </div>
        <div className="bg-slate-800 p-2 rounded border border-slate-700 text-center">
           <p className="text-[10px] text-gray-500 uppercase font-bold">Total</p>
-          <p className="text-white font-mono font-bold text-xs">{String(odds.overUnder || "-")}</p>
+          <p className="text-white font-mono font-bold text-xs">{formatValue(odds.overUnder)}</p>
        </div>
        <div className="bg-slate-800 p-2 rounded border border-slate-700 text-center">
           <p className="text-[10px] text-gray-500 uppercase font-bold">Moneyline</p>
-          <p className="text-white font-mono font-bold text-xs">{String(odds.moneyline || "-")}</p>
+          <p className="text-white font-mono font-bold text-xs">{formatValue(odds.moneyline)}</p>
        </div>
     </div>
   );
@@ -556,6 +570,7 @@ function RosterList({ players }) {
 }
 
 export default function DashboardTabs({ schedule, nextGame, upcoming, news, players, debugData, leaders, injuries, standings }) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState(nextGame ? 'next' : 'schedule');
   
   const [livePlays, setLivePlays] = useState([]);
@@ -682,6 +697,15 @@ export default function DashboardTabs({ schedule, nextGame, upcoming, news, play
 
     return () => clearInterval(interval);
   }, [nextGame, autoRefresh]);
+
+  // Server state polling (every 60s)
+  useEffect(() => {
+     const interval = setInterval(() => {
+        console.log("Polling server state...");
+        router.refresh();
+     }, 60000);
+     return () => clearInterval(interval);
+  }, [router]);
 
   const handleHistoryClick = async (game) => {
       setSelectedHistoryGame(game);
@@ -873,7 +897,7 @@ export default function DashboardTabs({ schedule, nextGame, upcoming, news, play
                     <div className="space-y-6">
                        <div className="bg-black/40 rounded-xl p-6 backdrop-blur-sm border border-white/5 mx-auto max-w-2xl text-center">
                           <p className="text-blue-400 text-xs font-bold uppercase mb-2 tracking-widest">Kickoff Countdown</p>
-                          <Countdown targetDate={displayGame.dateRaw} />
+                          <Countdown targetDate={displayGame.dateRaw} onComplete={() => router.refresh()} />
                        </div>
                        
                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">

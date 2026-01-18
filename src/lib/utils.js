@@ -106,27 +106,44 @@ export function processSchedule(scheduleData, cutoffDateStr = null) {
 }
 
 export function getGameInfo(game) {
-  if (!game) return null;
+  // Fail-Safe: Return a dummy object instead of null if game is completely missing
+  if (!game) {
+      return {
+          id: "unknown",
+          dateRaw: new Date().toISOString(),
+          dateString: "Date TBD",
+          timeString: "TBD",
+          name: "TBD vs TBD",
+          venue: "Venue TBD",
+          status: "Scheduled",
+          isLive: false,
+          patriots: { score: "0", logo: NFL_LOGO, name: "TBD", record: "0-0", isHome: true },
+          opponent: { score: "0", logo: NFL_LOGO, name: "TBD", record: "0-0" }
+      };
+  }
   
-  const competition = game.competitions?.[0];
-  if (!competition) return null;
+  // Fail-Safe: Handle missing competition array
+  const competition = game.competitions?.[0] || {};
 
+  // Fail-Safe: Handle missing competitors
   const competitors = competition.competitors || [];
-  const patriots = competitors.find(c => c.team.id === '17') || competitors[0];
-  const opponent = competitors.find(c => c.team.id !== '17') || competitors[1];
 
-  if (!patriots || !opponent) return null;
+  // Try to find Patriots and Opponent, or fallback to dummy objects
+  let patriots = competitors.find(c => c.team?.id === '17');
+  let opponent = competitors.find(c => c.team?.id !== '17');
 
-  const gameDate = new Date(game.date);
-  const now = new Date();
+  // If we can't identify them by ID, just take the first two available
+  if (!patriots) patriots = competitors[0];
+  if (!opponent) opponent = competitors[1] || competitors[0]; // If only 1 exists, duplicate it to avoid crash
 
+  // Helpers with extreme safety
   const getScore = (competitor) => {
     if (!competitor) return "0";
     if (!competitor.score) return "0";
     if (typeof competitor.score === 'object') {
        return competitor.score.displayValue || competitor.score.value || "0";
     }
-    return competitor.score.toString();
+    return String(competitor.score);
   };
 
   const getLogo = (competitor) => {
@@ -140,33 +157,46 @@ export function getGameInfo(game) {
       return NFL_LOGO;
   };
 
-  const apiSaysLive = game.status?.type?.state === 'in';
-  const isFinished = game.status?.type?.state === 'post';
+  const getName = (competitor) => {
+      return competitor?.team?.shortDisplayName || competitor?.team?.name || "TBD";
+  };
+
+  const getRecord = (competitor) => {
+      return competitor?.records?.[0]?.summary || "0-0";
+  };
+
+  const gameDate = new Date(game.date || new Date().toISOString());
+  const now = new Date();
+
+  // Defensive status checks
+  const statusType = game.status?.type || {};
+  const apiSaysLive = statusType.state === 'in';
+  const isFinished = statusType.state === 'post' || statusType.completed === true;
   const isPastStartTime = now >= gameDate;
 
   const isLive = apiSaysLive || (isPastStartTime && !isFinished);
 
   return {
-    id: game.id,
-    dateRaw: game.date,
+    id: game.id || `game-${Math.random()}`,
+    dateRaw: game.date || new Date().toISOString(),
     dateString: gameDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
     timeString: gameDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-    name: game.name || "TBD",
+    name: game.name || `${getName(patriots)} vs ${getName(opponent)}`,
     venue: competition.venue?.fullName || "Stadium TBD",
-    status: game.status?.type?.detail || "Scheduled", 
+    status: statusType.detail || "Scheduled",
     isLive: isLive,
     patriots: {
       score: getScore(patriots),
       logo: getLogo(patriots), 
-      name: patriots.team?.shortDisplayName || "Pats",
-      record: patriots.records?.[0]?.summary || "0-0",
-      isHome: patriots.homeAway === 'home'
+      name: getName(patriots),
+      record: getRecord(patriots),
+      isHome: patriots?.homeAway === 'home'
     },
     opponent: {
       score: getScore(opponent),
       logo: getLogo(opponent), 
-      name: opponent.team?.shortDisplayName || "Opponent",
-      record: opponent.records?.[0]?.summary || "0-0"
+      name: getName(opponent),
+      record: getRecord(opponent)
     }
   };
 }
