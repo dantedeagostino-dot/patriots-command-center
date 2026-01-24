@@ -52,14 +52,13 @@ const OFFICIAL_LOGOS = {
   '26': "https://upload.wikimedia.org/wikipedia/en/thumb/8/8e/Seattle_Seahawks_logo.svg/1200px-Seattle_Seahawks_logo.svg.png"      // Seahawks
 };
 
-export function processSchedule(scheduleData, cutoffDateStr = null) {
+export function processSchedule(scheduleData) {
   if (!scheduleData || !scheduleData.events) {
     return { history: [], next: null, upcoming: [] };
   }
 
   const events = scheduleData.events;
   const now = new Date();
-  const cutoffDate = cutoffDateStr ? new Date(cutoffDateStr) : null;
 
   events.sort((a, b) => new Date(a.date) - new Date(b.date));
 
@@ -69,11 +68,6 @@ export function processSchedule(scheduleData, cutoffDateStr = null) {
 
   for (const game of events) {
     const gameDate = new Date(game.date);
-
-    // Filtro de fecha
-    if (cutoffDate && gameDate > cutoffDate) {
-       continue;
-    }
 
     const statusType = game.status?.type;
     
