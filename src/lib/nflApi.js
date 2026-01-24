@@ -38,8 +38,8 @@ export async function getTeamNews() {
   return await fetchFromNFL('nfl-news');
 }
 
-export async function getStandings() {
-  return await fetchFromNFL('nflstandings', 'year=2025');
+export async function getStandings(year = '2025') {
+  return await fetchFromNFL('nflstandings', `year=${year}`);
 }
 
 export async function getTeamPlayers() {
@@ -55,8 +55,8 @@ export async function getPlayerStats(playerId) {
   return await fetchFromNFL('player-overview', `playerId=${playerId}`);
 }
 
-export async function getTeamLeaders() {
-  return await fetchFromNFL('team/leaders', `teamId=${PATRIOTS_ID}&season=2025&limit=3`);
+export async function getTeamLeaders(season = '2025') {
+  return await fetchFromNFL('team/leaders', `teamId=${PATRIOTS_ID}&season=${season}&limit=3`);
 }
 
 export async function getTeamInjuries() {

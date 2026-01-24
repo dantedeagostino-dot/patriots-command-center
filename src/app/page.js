@@ -15,9 +15,9 @@ export default async function Home() {
     getPatriotsSchedule('2025').catch(() => null),
     getPatriotsSchedule('2026').catch(() => null),
     getTeamNews().catch(() => null),
-    getStandings().catch(() => null),
+    getStandings('2025').catch(() => null),
     getTeamPlayers().catch(() => null),
-    getTeamLeaders().catch(() => null),
+    getTeamLeaders('2025').catch(() => null),
     getTeamInjuries().catch(() => null)
   ]);
 
@@ -26,13 +26,20 @@ export default async function Home() {
   if (schedule2025Raw?.events) allEvents = [...allEvents, ...schedule2025Raw.events];
   if (schedule2026Raw?.events) allEvents = [...allEvents, ...schedule2026Raw.events];
 
-  // Filter games between Sep 4, 2025 and Jan 4, 2026
-  const startDate = new Date('2025-09-04T00:00:00Z');
-  const endDate = new Date('2026-01-04T23:59:59Z');
-
+  // Filter for Regular Season (REG) and Postseason (POST), excluding Preseason (PRE)
   const filteredGames = allEvents.filter(game => {
-    const gameDate = new Date(game.date);
-    return gameDate >= startDate && gameDate <= endDate;
+    // API usually returns season.type: 1 (Pre), 2 (Reg), 3 (Post)
+    // Or check season.slug if available
+    const type = game.season?.type;
+    if (typeof type === 'number') {
+        return type === 2 || type === 3;
+    }
+    // Fallback if structure is different but contains slugs
+    if (game.season?.slug) {
+        return game.season.slug === 'regular-season' || game.season.slug === 'postseason';
+    }
+    // If no explicit season info is present, we include it to be safe (avoid hiding valid data)
+    return true;
   });
 
   // Sort by date
