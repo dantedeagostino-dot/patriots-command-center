@@ -68,7 +68,7 @@ export default function DashboardTabs({ schedule, nextGame, upcoming, news, play
    const [historyGameStats, setHistoryGameStats] = useState(null);
 
    const seasonChartData = schedule && schedule.length > 0 ? [...schedule]
-      .filter(game => game.status === "Final" || game.status === "Postponed" || game.patriots?.score !== "0") // Only include played games in charts
+      .filter(game => game.status?.toLowerCase().includes("final") || game.status === "Postponed" || (game.patriots?.score !== "0" && game.patriots?.score !== 0)) // Only include played games in charts
       .sort((a, b) => new Date(a.dateRaw).getTime() - new Date(b.dateRaw).getTime())
       .map((game, index) => {
          const patsScore = parseInt(game.patriots.score) || 0;
