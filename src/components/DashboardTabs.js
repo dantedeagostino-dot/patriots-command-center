@@ -21,24 +21,24 @@ import InjuryReportWidget from './dashboard/InjuryReportWidget';
 import SeasonLeadersWidget from './dashboard/SeasonLeadersWidget';
 import RosterList from './dashboard/RosterList';
 
-const TEST_LIVE_MODE = false; // ⚠️ Poner en false para producción
+const TEST_LIVE_MODE = true; // ⚠️ Poner en false para producción
 const POLLING_INTERVAL = 10000;
 
 const MOCK_PLAYS = [
-   { time: "Q4 01:58", text: "Drake Maye pass deep right to Douglas for 25 yards TOUCHDOWN." },
-   { time: "Q4 02:05", text: "Stevenson rush up the middle for 4 yards." },
-   { time: "Q4 02:45", text: "Maye pass short left to Henry for 12 yards, 1st Down." },
-   { time: "Q4 03:10", text: "Gibson rush right tackle for -2 yards." },
-   { time: "Q4 03:50", text: "Tua Tagovailoa pass incomplete deep left intended for Hill." },
+   { time: "Q4 00:20", text: "Drake Maye pass short right to Pop Douglas for 5 yards, TOUCHDOWN." },
+   { time: "Q4 00:26", text: "Timeout #2 by NE." },
+   { time: "Q4 00:35", text: "Drake Maye pass deep left to Boutte for 35 yards, 1st Down." },
+   { time: "Q4 00:58", text: "R. Stevenson rush up the middle for 6 yards." },
+   { time: "Q4 01:25", text: "G. Smith sacked by K. White for -8 yards." },
 ];
 
 const MOCK_STATS = {
-   passing: { name: "D. Maye", stat: "245 YDS, 2 TD" },
-   rushing: { name: "R. Stevenson", stat: "89 YDS, 1 TD" },
-   receiving: { name: "D. Douglas", stat: "6 REC, 85 YDS" }
+   passing: { name: "D. Maye", stat: "310 YDS, 3 TD" },
+   rushing: { name: "R. Stevenson", stat: "105 YDS, 1 TD" },
+   receiving: { name: "D. Douglas", stat: "8 REC, 112 YDS, 1 TD" }
 };
 
-const MOCK_ODDS = { spread: "-3.5", overUnder: "48.5", moneyline: "-180" };
+const MOCK_ODDS = { spread: "-1.5", overUnder: "52.5", moneyline: "-120" };
 
 const MOCK_CHART_DATA = [
    { time: '1', pats: 0, opp: 0 },
@@ -51,8 +51,32 @@ const MOCK_CHART_DATA = [
    { time: '8', pats: 27, opp: 24 }
 ];
 
+const SUPER_BOWL_GAME = {
+   id: 'sb-mock-live',
+   date: new Date().toISOString(),
+   venue: "Caesars Superdome",
+   status: "Q4 - 00:20",
+   isLive: true,
+   patriots: {
+       name: "Patriots",
+       logo: "https://upload.wikimedia.org/wikipedia/en/thumb/b/b9/New_England_Patriots_logo.svg/1200px-New_England_Patriots_logo.svg.png",
+       score: "28",
+       record: "14-3"
+   },
+   opponent: {
+       name: "Seahawks",
+       logo: "https://upload.wikimedia.org/wikipedia/en/thumb/8/8e/Seattle_Seahawks_logo.svg/1200px-Seattle_Seahawks_logo.svg.png",
+       score: "24",
+       record: "13-4"
+   },
+   yardLine: 95,
+   possessionTeam: 'home',
+   down: 2,
+   distance: 5
+};
+
 export default function DashboardTabs({ schedule, nextGame, upcoming, news, players, debugData, leaders, injuries, standings }) {
-   const [activeTab, setActiveTab] = useState(nextGame ? 'next' : 'schedule');
+   const [activeTab, setActiveTab] = useState((TEST_LIVE_MODE || nextGame) ? 'next' : 'schedule');
 
    const [livePlays, setLivePlays] = useState([]);
    const [liveStats, setLiveStats] = useState(null);
@@ -104,14 +128,7 @@ export default function DashboardTabs({ schedule, nextGame, upcoming, news, play
 
    const baseGame = nextGame;
 
-   const displayGame = TEST_LIVE_MODE && nextGame ? {
-      ...nextGame,
-      isLive: true,
-      status: "Q4 - 01:58",
-      patriots: { ...nextGame.patriots, score: "27", name: String(nextGame.patriots.name || "Patriots") },
-      opponent: { ...nextGame.opponent, score: "24", name: String(nextGame.opponent.name || "Opponent") },
-      yardLine: 68, possessionTeam: 'home', down: 2, distance: 5
-   } : (liveScoreboard ? {
+   const displayGame = TEST_LIVE_MODE ? SUPER_BOWL_GAME : (liveScoreboard ? {
       ...baseGame,
       isLive: true,
       status: liveScoreboard.status,
