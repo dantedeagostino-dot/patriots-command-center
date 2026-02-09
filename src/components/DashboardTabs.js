@@ -21,37 +21,10 @@ import InjuryReportWidget from './dashboard/InjuryReportWidget';
 import SeasonLeadersWidget from './dashboard/SeasonLeadersWidget';
 import RosterList from './dashboard/RosterList';
 
-const TEST_LIVE_MODE = false; // ⚠️ Poner en false para producción
 const POLLING_INTERVAL = 10000;
 
-const MOCK_PLAYS = [
-   { time: "Q4 01:58", text: "Drake Maye pass deep right to Douglas for 25 yards TOUCHDOWN." },
-   { time: "Q4 02:05", text: "Stevenson rush up the middle for 4 yards." },
-   { time: "Q4 02:45", text: "Maye pass short left to Henry for 12 yards, 1st Down." },
-   { time: "Q4 03:10", text: "Gibson rush right tackle for -2 yards." },
-   { time: "Q4 03:50", text: "Tua Tagovailoa pass incomplete deep left intended for Hill." },
-];
-
-const MOCK_STATS = {
-   passing: { name: "D. Maye", stat: "245 YDS, 2 TD" },
-   rushing: { name: "R. Stevenson", stat: "89 YDS, 1 TD" },
-   receiving: { name: "D. Douglas", stat: "6 REC, 85 YDS" }
-};
-
-const MOCK_ODDS = { spread: "-3.5", overUnder: "48.5", moneyline: "-180" };
-
-const MOCK_CHART_DATA = [
-   { time: '1', pats: 0, opp: 0 },
-   { time: '2', pats: 7, opp: 3 },
-   { time: '3', pats: 7, opp: 10 },
-   { time: '4', pats: 14, opp: 10 },
-   { time: '5', pats: 14, opp: 17 },
-   { time: '6', pats: 21, opp: 17 },
-   { time: '7', pats: 24, opp: 24 },
-   { time: '8', pats: 27, opp: 24 }
-];
-
 export default function DashboardTabs({ schedule, nextGame, upcoming, news, players, debugData, leaders, injuries, standings }) {
+   // Prioritize 'next' tab if a nextGame exists (which is true if we are in live/forced mode)
    const [activeTab, setActiveTab] = useState(nextGame ? 'next' : 'schedule');
 
    const [livePlays, setLivePlays] = useState([]);
@@ -104,24 +77,18 @@ export default function DashboardTabs({ schedule, nextGame, upcoming, news, play
 
    const baseGame = nextGame;
 
-   const displayGame = TEST_LIVE_MODE && nextGame ? {
-      ...nextGame,
-      isLive: true,
-      status: "Q4 - 01:58",
-      patriots: { ...nextGame.patriots, score: "27", name: String(nextGame.patriots.name || "Patriots") },
-      opponent: { ...nextGame.opponent, score: "24", name: String(nextGame.opponent.name || "Opponent") },
-      yardLine: 68, possessionTeam: 'home', down: 2, distance: 5
-   } : (liveScoreboard ? {
+   // If liveScoreboard has data, use it to update the displayed score.
+   const displayGame = liveScoreboard ? {
       ...baseGame,
       isLive: true,
       status: liveScoreboard.status,
       patriots: { ...baseGame.patriots, score: liveScoreboard.patsScore },
       opponent: { ...baseGame.opponent, score: liveScoreboard.oppScore }
-   } : baseGame);
+   } : baseGame;
 
 
    const fetchLiveData = async () => {
-      if (!nextGame || TEST_LIVE_MODE) return;
+      if (!nextGame) return;
 
       setIsRefreshing(true);
       try {
@@ -148,6 +115,11 @@ export default function DashboardTabs({ schedule, nextGame, upcoming, news, play
                gameStatus = data.boxScore.status.type.detail;
             }
 
+            // Force Live Status for our forced historical game ID (SB49)
+            if (nextGame.id === '400749027') {
+                gameStatus = "Q4 - 00:20"; // Keep it looking like the end of the game
+            }
+
             setLiveScoreboard({
                patsScore: patsTeam ? patsTeam.score : "0",
                oppScore: oppTeam ? oppTeam.score : "0",
@@ -161,10 +133,6 @@ export default function DashboardTabs({ schedule, nextGame, upcoming, news, play
    };
 
    useEffect(() => {
-      if (TEST_LIVE_MODE) {
-         setLivePlays(MOCK_PLAYS); setLiveStats(MOCK_STATS); setLiveOdds(MOCK_ODDS); setChartData(MOCK_CHART_DATA); return;
-      }
-
       if (!nextGame) return;
 
       let interval = null;
