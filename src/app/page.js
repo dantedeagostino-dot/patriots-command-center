@@ -25,10 +25,23 @@ export default async function Home() {
     getTeamInjuries().catch(() => null)
   ]);
 
+  const extractEvents = (data) => {
+    if (!data) return [];
+    if (Array.isArray(data)) return data;
+    if (data.events) return data.events;
+    if (data.items) return data.items;
+    if (data.team && data.team.schedule) return data.team.schedule;
+    if (data.schedule) return data.schedule;
+    return [];
+  };
+
   // Combine events from current and next season
   let allEvents = [];
-  if (scheduleCurrentRaw?.events) allEvents = [...allEvents, ...scheduleCurrentRaw.events];
-  if (scheduleNextRaw?.events) allEvents = [...allEvents, ...scheduleNextRaw.events];
+  const eventsCurrent = extractEvents(scheduleCurrentRaw);
+  const eventsNext = extractEvents(scheduleNextRaw);
+
+  if (Array.isArray(eventsCurrent)) allEvents = [...allEvents, ...eventsCurrent];
+  if (Array.isArray(eventsNext)) allEvents = [...allEvents, ...eventsNext];
 
   // Filter for Regular Season (REG) and Postseason (POST), excluding Preseason (PRE)
   const filteredGames = allEvents.filter(game => {
@@ -80,10 +93,11 @@ export default async function Home() {
       const todayStr = usDate.toISOString().slice(0, 10).replace(/-/g, ''); // YYYYMMDD
 
       const generalSchedule = await getNFLSchedule(todayStr).catch(() => null);
+      const generalEvents = extractEvents(generalSchedule);
 
-      if (generalSchedule && generalSchedule.events) {
+      if (generalEvents && generalEvents.length > 0) {
         // Find first non-completed game
-        const generalGame = generalSchedule.events.find(g => !g.status?.type?.completed);
+        const generalGame = generalEvents.find(g => !g.status?.type?.completed);
         if (generalGame) {
            nextGameFormatted = getGameInfo(generalGame);
         }
