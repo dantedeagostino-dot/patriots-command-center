@@ -5,26 +5,30 @@ import {
   getTeamPlayers,
   getBasicRoster,
   getTeamLeaders,
-  getTeamInjuries
+  getTeamInjuries,
+  getNFLSchedule
 } from '../lib/nflApi';
-import { getGameInfo } from '../lib/utils';
+import { getGameInfo, getCurrentSeason } from '../lib/utils';
 import DashboardTabs from '../components/DashboardTabs';
 
 export default async function Home() {
-  const [schedule2025Raw, schedule2026Raw, newsRaw, standingsRaw, playersRaw, leadersRaw, injuriesRaw] = await Promise.all([
-    getPatriotsSchedule('2025').catch(() => null),
-    getPatriotsSchedule('2026').catch(() => null),
+  const currentSeason = getCurrentSeason();
+  const nextSeason = (parseInt(currentSeason) + 1).toString();
+
+  const [scheduleCurrentRaw, scheduleNextRaw, newsRaw, standingsRaw, playersRaw, leadersRaw, injuriesRaw] = await Promise.all([
+    getPatriotsSchedule(currentSeason).catch(() => null),
+    getPatriotsSchedule(nextSeason).catch(() => null),
     getTeamNews().catch(() => null),
-    getStandings('2025').catch(() => null),
+    getStandings(currentSeason).catch(() => null),
     getTeamPlayers().catch(() => null),
-    getTeamLeaders('2025').catch(() => null),
+    getTeamLeaders(currentSeason).catch(() => null),
     getTeamInjuries().catch(() => null)
   ]);
 
-  // Combine events from 2025 and 2026 (Jan 2026 is part of 2025 season mostly, but might be in 2026 fetch depending on API)
+  // Combine events from current and next season
   let allEvents = [];
-  if (schedule2025Raw?.events) allEvents = [...allEvents, ...schedule2025Raw.events];
-  if (schedule2026Raw?.events) allEvents = [...allEvents, ...schedule2026Raw.events];
+  if (scheduleCurrentRaw?.events) allEvents = [...allEvents, ...scheduleCurrentRaw.events];
+  if (scheduleNextRaw?.events) allEvents = [...allEvents, ...scheduleNextRaw.events];
 
   // Filter for Regular Season (REG) and Postseason (POST), excluding Preseason (PRE)
   const filteredGames = allEvents.filter(game => {
@@ -65,7 +69,29 @@ export default async function Home() {
     return !game.status?.type?.completed;
   });
 
-  const nextGameFormatted = nextGameRaw ? getGameInfo(nextGameRaw) : null;
+  let nextGameFormatted = nextGameRaw ? getGameInfo(nextGameRaw) : null;
+
+  // Fallback: If no Patriots game found (e.g. season over), check for ANY live/upcoming NFL game (e.g. Super Bowl)
+  if (!nextGameFormatted) {
+    try {
+      // Adjust for US Eastern Time (approximate) to ensure late night games show up on the correct "game day"
+      const now = new Date();
+      const usDate = new Date(now.getTime() - 5 * 60 * 60 * 1000);
+      const todayStr = usDate.toISOString().slice(0, 10).replace(/-/g, ''); // YYYYMMDD
+
+      const generalSchedule = await getNFLSchedule(todayStr).catch(() => null);
+
+      if (generalSchedule && generalSchedule.events) {
+        // Find first non-completed game
+        const generalGame = generalSchedule.events.find(g => !g.status?.type?.completed);
+        if (generalGame) {
+           nextGameFormatted = getGameInfo(generalGame);
+        }
+      }
+    } catch (e) {
+      console.error("Fallback schedule error:", e);
+    }
+  }
 
 
   let finalPlayersRaw = playersRaw;

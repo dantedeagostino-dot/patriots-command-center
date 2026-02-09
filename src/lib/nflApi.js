@@ -73,3 +73,7 @@ export async function getGameBoxScore(gameId) {
 export async function getGameOdds(gameId) {
   return await fetchFromNFL('nflpicks', `id=${gameId}`);
 }
+
+export async function getNFLSchedule(date) {
+  return await fetchFromNFL('nfl-schedule', date ? `date=${date}` : '');
+}
