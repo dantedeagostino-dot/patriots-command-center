@@ -164,3 +164,14 @@ export function getGameInfo(game) {
     }
   };
 }
+
+export function getCurrentSeason() {
+  const now = new Date();
+  const month = now.getMonth(); // 0-11
+  const year = now.getFullYear();
+  // If Jan or Feb, it's the previous year's season.
+  if (month < 2) {
+    return (year - 1).toString();
+  }
+  return year.toString();
+}
