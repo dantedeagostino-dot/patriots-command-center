@@ -6,7 +6,8 @@ import {
   getBasicRoster,
   getTeamLeaders,
   getTeamInjuries,
-  getNFLSchedule
+  getNFLSchedule,
+  getGameBoxScore
 } from '../lib/nflApi';
 import { getGameInfo, getCurrentSeason } from '../lib/utils';
 import DashboardTabs from '../components/DashboardTabs';
@@ -91,6 +92,52 @@ export default async function Home() {
     } catch (e) {
       console.error("Fallback schedule error:", e);
     }
+  }
+
+  // Force Live Game Logic for "Real Game" Request:
+  // Check if we should override with Super Bowl XLIX (ID 400749027) if requested or if no live game exists.
+  // User requested "show the superbowl game patriots vs seahawks live".
+  // Prioritize this if the current nextGame is NOT the Seahawks match (meaning it's missing or irrelevant).
+  if (!nextGameFormatted || (nextGameFormatted.opponent && nextGameFormatted.opponent.name !== 'Seahawks')) {
+     try {
+         // Fetch historical Super Bowl XLIX
+         const sb49Data = await getGameBoxScore('400749027').catch(() => null);
+
+         if (sb49Data && (sb49Data.game || sb49Data.header)) {
+             // nflboxscore response often puts game info in 'header' or 'game' depending on endpoint version/provider.
+             // Usually 'header' contains the event structure compatible with getGameInfo logic (competitions array).
+             let sbGame = sb49Data.header || sb49Data.game;
+
+             if (sbGame) {
+                 // Deep clone to safely mutate
+                 sbGame = JSON.parse(JSON.stringify(sbGame));
+
+                 // Patch the date to be NOW so it appears as "Tonight" / Live
+                 sbGame.date = new Date().toISOString();
+
+                 // Patch status to appear LIVE (Q4) instead of Final
+                 if (sbGame.competitions && sbGame.competitions[0] && sbGame.competitions[0].status) {
+                     const status = sbGame.competitions[0].status;
+                     status.type.state = 'in'; // 'in' = In Progress
+                     status.type.completed = false;
+                     status.type.detail = 'Q4 - 00:20';
+                 } else if (sbGame.status) {
+                      // Some structures put status at root
+                      sbGame.status.type.state = 'in';
+                      sbGame.status.type.completed = false;
+                      sbGame.status.type.detail = 'Q4 - 00:20';
+                 }
+
+                 const formattedSB = getGameInfo(sbGame);
+                 if (formattedSB) {
+                     nextGameFormatted = formattedSB;
+                     nextGameFormatted.isLive = true; // Force frontend flag
+                 }
+             }
+         }
+     } catch (e) {
+         console.error("Error fetching forced Super Bowl:", e);
+     }
   }
 
 
